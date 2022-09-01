@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # 平台基础应用
+    'plat.apps.PlatConfig',
 ]
 
 MIDDLEWARE = [
