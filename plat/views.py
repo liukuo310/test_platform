@@ -5,5 +5,5 @@ from django.http import HttpRequest, HttpResponse
 
 def test_view(request):
     """测试试图函数"""
-    return HttpResponse("ok")
+    return render(request, 'plat/login.html')
 
