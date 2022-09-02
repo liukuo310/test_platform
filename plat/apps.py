@@ -4,3 +4,4 @@ from django.apps import AppConfig
 class PlatConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'plat'
+    verbose_name = '平台应用'
