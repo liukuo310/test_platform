@@ -1,7 +1,7 @@
 from django.urls import path
 
-from plat.views import test_view
+from plat.views import login_view
 
 urlpatterns = [
-    path('test', test_view),
+    path('', login_view),  # 登录首页
 ]

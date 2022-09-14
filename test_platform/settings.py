@@ -77,9 +77,14 @@ WSGI_APPLICATION = 'test_platform.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',  # 用mysql数据库
+        'NAME': 'test_platform',  # 数据库名称
+        'HOST': '127.0.0.1',  # 主机地址
+        'PORT': 3306,  # 数据库服务端口
+        'USER': 'root',  # 数据库账户
+        'PASSWORD': '123123'  # 密码，默认为空（没有密码时不写）
     }
+
 }
 
 
