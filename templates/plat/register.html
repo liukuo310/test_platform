@@ -9,17 +9,15 @@
     <p>账号:<input name="count" id="count" type="text" /></p>
     <p>密码:<input name="password" id="password" type="text" /></p>
     <p>确认密码:<input name="re_password" id="re_password" type="text" /></p>
-    <p><input type="submit" value="注册账号密码" onclick="register_count"/></p>
-    <p><input type="submit" value="修改账号密码" onclick="register_count"/></p>
-    <p><input type="submit" value="删除账号" onclick="del_count"/></p>
+    <p><input type="submit" value="注册账号密码" /></p>
+    <p><input type="submit" value="修改账号密码" /></p>
+    <p><input id="del" type="submit" value="删除账号" onclick="del_count()"/></p>
+
 </form>
 <script>
-    function register_count()
-    {
-    document.form.method="post";
-    }
     function del_count(){
-    document.form.method="delete";
+    document.getElementById("register").method="get";
+    document.getElementById("register").submit;
     }
 </script>
 </body>
