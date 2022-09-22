@@ -3,10 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>平台首页</title>
+<style type="text/css">
+#select_list{
+}
+
+</style>
 </head>
 <body>
-<button>用例管理平台</button>
-<button>接口测试平台</button>
-<button>性能测试平台</button>
+<div id="select_list">
+    <button onclick="jump('')">用例管理平台</button><br>
+    <button>接口测试平台</button><br>
+    <button>性能测试平台</button><br>
+</div>
+<script>
+    function jump(url){
+        window.location.href=url;
+    }
+</script>
 </body>
 </html>

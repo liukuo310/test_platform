@@ -15,17 +15,23 @@ def login_view(request):
 def login(request):
     """用户登录"""
     count_list = []
-    count = request.POST.get("count")
+    count_ = request.POST.get("count")
     password = request.POST.get("password")
-    count_list_query = User.objects.filter(count=count)
+    count_list_query = User.objects.filter(count=count_)
     count_list_serializer = UserDetailSerialize(count_list_query, many=True)
     count_dict_query = count_list_serializer.data
     for i in count_dict_query:
         count_list.append(i["count"])
-    if count not in count_list:
+    if count_ not in count_list:
         return HttpResponse("没有该账号，请先注册")
     else:
-        pass
+        user_password_ = User.objects.get(count=count_)
+        user_password = UserDetailSerialize(user_password_).data
+        print(f"正确密码是{user_password['password']}")
+        if password != user_password['password']:
+            return HttpResponse("密码不正确")
+        else:
+            return render(request, "plat/main.html")
 
 
 def register_view(request):
