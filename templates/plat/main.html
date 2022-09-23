@@ -5,15 +5,24 @@
     <title>平台首页</title>
 <style type="text/css">
 #select_list{
+    line-height:30px;
+    background-color:lightblue;
+    height:300px;
+    width:100px;
+    float:left;
+    padding:5px;
 }
+button{
+height:100px;
 
+}
 </style>
 </head>
 <body>
 <div id="select_list">
     <button onclick="jump('')">用例管理平台</button><br>
-    <button>接口测试平台</button><br>
-    <button>性能测试平台</button><br>
+    <button onclick="jump('')">接口测试平台</button><br>
+    <button onclick="jump('')">性能测试平台</button><br>
 </div>
 <script>
     function jump(url){

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>select_page</title>
+<style>
+body{text-align:center;}
+#link{
+    background-color:lightblue;
+    margin:200px;
+    height:100px;
+    width:100px;
+    border:5px solid red;
+}
+button:active{
+    border:5px solid pink;
+}
+</style>
+</head>
+<body>
+<h1 id="res"></h1>
+<button id="link" onclick="try_link()">尝试连接手机</button>
+<br>
+<form action="/select_test_template" method="post" style="display:none" id="form_package_list">
+    <select id="package_select" name="select_value" size="40">
+    </select>
+    <button type="submit" name="submitbtn" style="background-color: green">开始测试</button>
+</form>
+<br>
+<script>
+function request_get(url) {
+    var xhttp;
+    xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {}
+  };
+    xhttp.open("GET", url, false);
+    xhttp.send();
+    return xhttp.responseText;
+};
+function request_post(url, body_data) {
+    var xhttp;
+    xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {}
+  };
+    xhttp.open("POST", url, false);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(body_data);
+    return xhttp.responseText;
+};
+function try_link(){
+    var get_device_info = JSON.parse(request_get("http://127.0.0.1:8000/get_device_info"));
+    var obj = document.getElementById("package_select");
+    // alert(get_device_info.app_list instanceof Array);
+    // alert(get_device_info.app_list);
+    if (get_device_info.app_list instanceof Array && get_device_info.app_list.length!=0){
+        console.log("是安卓设备");
+        obj.options.add(new Option("Lamour", "com.asiainno.uplive.aiglamour"));
+        obj.options.add(new Option("Fancyme", "com.aiglamour.ancho"));
+<!--        配置提取-->
+        if (get_device_info.device_sys){
+            for (i in get_device_info.app_list){
+                package_name = get_device_info.app_list[i];
+                obj.options.add(new Option(package_name, package_name));
+            };
+            document.getElementById("form_package_list").style.display="inline";
+            document.getElementById("link").style.display="none";
+            }
+        else {alert("没有连接手机");}
+   }else {
+       console.log("是ios设备");
+        if (get_device_info.device_sys){
+            for (i in get_device_info.app_list){
+                console.log(get_device_info.app_list[i]);
+                obj.options.add(new Option(get_device_info.app_list[i], i));
+            };
+            document.getElementById("form_package_list").style.display="inline";
+            document.getElementById("link").style.display="none";
+            }
+        else {alert("没有连接手机");}
+   }
+}
+</script>
+</body>
+</html>
