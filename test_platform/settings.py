@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'plat.apps.PlatConfig',
     #  rest风格
     'rest_framework',
+    #  客户端性能测试应用
+    'performance.apps.PerformaceConfig'
 ]
 
 MIDDLEWARE = [
