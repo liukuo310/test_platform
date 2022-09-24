@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpRequest, HttpResponse
 from plat.models import User
 from plat.serializers import UserDetailSerialize
@@ -31,7 +31,12 @@ def login(request):
         if password != user_password['password']:
             return HttpResponse("密码不正确")
         else:
-            return render(request, "plat/main.html")
+            return redirect("main_view/")
+
+
+def main_view(request):
+    """登录后的平台主页"""
+    return render(request, "plat/main.html")
 
 
 def register_view(request):

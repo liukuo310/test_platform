@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class PerformaceConfig(AppConfig):
+class PerformanceConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'performace'
+    name = 'performance'
