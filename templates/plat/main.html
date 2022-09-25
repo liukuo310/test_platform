@@ -20,14 +20,15 @@ height:100px;
 </head>
 <body>
 <div id="select_list">
-    <button onclick="jump('performance/')">用例管理平台</button><br>
-    <button onclick="jump('')">接口测试平台</button><br>
-    <button onclick="jump('')">性能测试平台</button><br>
+    <a href="">
+        <button>用例管理平台</button>
+    </a>
+    <a href="">
+        <button>接口测试平台</button>
+    </a>
+    <a href="http://127.0.0.1:8000/performance/performance_main/">
+        <button>性能测试平台</button>
+    </a>
 </div>
-<script>
-    function jump(url){
-        window.location.href=url;
-    }
-</script>
 </body>
 </html>
