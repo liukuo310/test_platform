@@ -23,14 +23,18 @@ def login(request):
     for i in count_dict_query:
         count_list.append(i["count"])
     if count_ not in count_list:
-        return HttpResponse("没有该账号，请先注册")
+        error_data = dict()
+        error_data["error_info"] = "没有该账号，请先注册"
+        return render(request, "plat/alert.html", context=error_data)
     else:
         user_password_ = User.objects.get(count=count_)
         user_password = UserDetailSerialize(user_password_).data
-        print(f"正确密码是{user_password['password']}")
+        # print(f"正确密码是{user_password['password']}")
         if password != user_password['password']:
             return HttpResponse("密码不正确")
         else:
+            request.session["count"] = count_
+            request.session["user_password"] = user_password['password']
             return redirect("main_view/")
 
 
@@ -48,6 +52,7 @@ class Register(View):
     """用户账号增删改"""
     def post(self, request):
         count_list = []
+        error_data = dict()
         count = request.POST.get("count")
         password = request.POST.get("password")
         re_password = request.POST.get("re_password")
@@ -56,24 +61,29 @@ class Register(View):
         count_dict_query = count_list_serializer.data
         for i in count_dict_query:
             count_list.append(i["count"])
-        print(f"账号：{count} ,密码：{password},确认密码：{re_password}")
-        print(f"数据库中的账号情况：{count_list}")
-        print(len(str(count)))
+        # print(f"账号：{count} ,密码：{password},确认密码：{re_password}")
+        # print(f"数据库中的账号情况：{count_list}")
+        # print(len(str(count)))
         if len(str(count)) == 0:
-            return HttpResponse("账号为不能不填写")
+            error_data["error_info"] = "账号为不能不填写"
+            return render(request, "plat/alert.html", context=error_data)
         if len(str(password)) == 0:
-            return HttpResponse("密码不能不填写")
+            error_data["error_info"] = "密码不能不填写"
+            return render(request, "plat/alert.html", context=error_data)
         if len(str(re_password)) == 0:
-            return HttpResponse("确认密码不能不填写")
+            error_data["error_info"] = "确认密码不能不填写"
+            return render(request, "plat/alert.html", context=error_data)
         if password != re_password:
-            return HttpResponse("确认密码与密码不相同")
+            error_data["error_info"] = "确认密码与密码不相同"
+            return render(request, "plat/alert.html", context=error_data)
         if len(str(count)) >= 20 or len(str(password)) >= 20:
-            return HttpResponse("账号密码太长了，不得长于20个字符")
+            error_data["error_info"] = "账号密码太长了，不得长于20个字符"
+            return render(request, "plat/alert.html", context=error_data)
         if count in count_list:
             user = User.objects.get(count=count)
             user.password = password
             user.save()
-            return HttpResponse("密码已经修改，请查看")
+            return render(request, 'plat/login.html')  # todo:密码已经修改，请查看提示
         else:
             User.objects.create(
                 count=count,
