@@ -52,13 +52,10 @@ function request_post(url, body_data) {
 function try_link(){
     var get_device_info = JSON.parse(request_get("http://127.0.0.1:8000/get_device_info"));
     var obj = document.getElementById("package_select");
-    // alert(get_device_info.app_list instanceof Array);
-    // alert(get_device_info.app_list);
     if (get_device_info.app_list instanceof Array && get_device_info.app_list.length!=0){
         console.log("是安卓设备");
         obj.options.add(new Option("Lamour", "com.asiainno.uplive.aiglamour"));
         obj.options.add(new Option("Fancyme", "com.aiglamour.ancho"));
-<!--        配置提取-->
         if (get_device_info.device_sys){
             for (i in get_device_info.app_list){
                 package_name = get_device_info.app_list[i];

@@ -1,0 +1,493 @@
+<!DOCTYPE HTML>
+
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="https://jscdn.com.cn/highcharts/images/favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="text/javascript" src="jquery.js"></script>
+<script src="https://code.highcharts.com.cn/jquery/jquery-1.8.3.min.js"></script>
+<script src="https://cdn.highcharts.com.cn/highstock/highstock.js"></script>
+<script src="https://cdn.highcharts.com.cn/highcharts/modules/exporting.js"></script>
+<script src="https://code.highcharts.com.cn/highcharts-plugins/highcharts-zh_CN.js"></script>
+<script src="http://cdn.hcharts.cn/highcharts/highcharts-3d.js"></script>
+<style>
+table {
+    width: 500px;
+    height: 110px;
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,
+tr,
+td {
+    border: 1px solid #333;
+}
+table tr {
+    text-align: center;
+}
+
+table img {
+    width: 70px;
+    height: 70px;
+}
+
+.chart_dev {
+    min-width:400px;
+    height:800px
+}
+
+.op_btn {
+    height: 80px;
+    position: fixed ;
+    left: 0px;
+    top: 0px;
+    z-index: 100;
+}
+
+.zhan {
+    height: 80px;
+}
+
+.sel_bt {
+    height: 80px;
+    width:200px;
+}
+</style>
+</head>
+<body>
+<div class="op_btn">
+    <button class="sel_bt" type="button" onclick="start()">录制数据</button>
+    <button class="sel_bt" type="button" onclick="end()">结束录制数据</button>
+    <button class="sel_bt" onclick="result_data()">生成统计结果</button>
+    <button class="sel_bt" onclick="reset_test_data()">清空数据重新测试</button>
+    <button class="sel_bt" onclick="get_phone_info()">查看设备信息</button>
+    <button class="sel_bt" onclick="export_report()">生成本地日志</button>
+</div>
+<div class="zhan"></div>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(AppCPU) [%]</th>
+            <th>Max(AppCPU) [%]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_cpu"></td>
+            <td id="max_cpu"></td>
+        </tr>
+    </tbody>
+</table>
+<div id="container_cpu_total" class="chart_dev"></div>
+<div id="container_cpu" class="chart_dev"></div>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(FPS)</th>
+            <th>Jank</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_fps"></td>
+            <td id="avg_Jank"></td>
+        </tr>
+    </tbody>
+</table>
+<div id="container_fps" class="chart_dev"></div>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(Memory) [MB]</th>
+            <th>Max(Memory) [MB]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_memory"></td>
+            <td id="max_memory"></td>
+        </tr>
+    </tbody>
+</table>
+<div id="container_mem" class="chart_dev"></div>
+<div id="container_mem_ps" class="chart_dev"></div>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(Send) [KB/s]</th>
+            <th>Sum(Send) [KB]</th>
+            <th>Avg(Recv) [KB/s]</th>
+            <th>Sum(Recv) [KB]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_send"></td>
+            <td id="sum_send"></td>
+            <td id="avg_rec"></td>
+            <td id="sum_rec"></td>
+        </tr>
+    </tbody>
+</table>
+<div id="container_net" class="chart_dev"></div>
+<div id="container_net_up" class="chart_dev"></div>
+<div id="container_net_down" class="chart_dev"></div>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(temperature) [℃]</th>
+            <th>Max(temperature) [℃]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_temperature"></td>
+            <td id="max_temperature"></td>
+        </tr>
+    </tbody>
+</table>
+<div id="container_tem" class="chart_dev"></div>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(battery) [%]</th>
+            <th>Max(battery) [%]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_battery"></td>
+            <td id="max_battery"></td>
+        </tr>
+    </tbody>
+</table>
+<div id="container_battery" class="chart_dev"></div>
+<script>
+const localhost = "http://127.0.0.1:8000/"
+var series_cpu_total = [{name:"cpu_total", data:[]}];
+var series_cpu = [{name:"total_cpu", data:[]},{name:"master_cpu", data:[]},{name:"im_cpu", data:[]},{name:"download_cpu", data:[]}];
+var series_fps = [{name:"fps", data:[]},{"name":"jancky", data:[]},{"name":"carton", data:[]}];
+var series_mem = [{name:"total_mem", data:[]},{name:"native_mem", data:[]},{name:"dalvik_mem", data:[]}];
+var series_mem_ps = [{name:"master_ps", data:[]},{name:"im_ps", data:[]},{name:"download_ps", data:[]}];
+var series_net = [{name:"net_up", data:[]},{"name":"net_down", data:[]}];
+var series_net_up = [{name:"master_up", data:[]},{name:"im_up", data:[]},{name:"download_up", data:[]}]
+var series_net_down = [{name:"master_down", data:[]},{name:"im_down", data:[]},{name:"download_down", data:[]}]
+var series_tem = [{name:"battery_temperature", data: []}];
+var series_battery = [{name:"battery", data:[]}];
+
+var time_labels = [];
+var cpu_data = []
+var fps_data = [];
+var janky_data = [];
+var carton_data = [];
+var mem_data = [];
+var net_up_data = [];
+var net_down_data = [];
+var battery_temperature_data = [];
+var battery_level_data = [];
+
+Highcharts.setOptions({
+      global : {
+            useUTC : false
+      }
+});
+
+const chart_cpu_total = create_chart("container_cpu_total", "cpu [%]", series_cpu);
+
+const chart_cpu = create_chart("container_cpu", "cpu_PS [%]", series_cpu);
+
+const chart_fps = create_chart("container_fps", "fps", series_fps);
+
+const chart_mem = create_chart("container_mem", "mem [kb]", series_mem);
+
+const chart_mem_ps = create_chart("container_mem_ps", "mem_PS [kb]", series_mem_ps);
+
+const chart_net = create_chart("container_net", "net", series_net);
+
+const chart_net_up = create_chart("container_net_up", "net_up_PS", series_net_up);
+
+const chart_net_down = create_chart("container_net_down", "net_down_PS", series_net_down);
+
+const chart_tem = create_chart("container_tem", "temperature ℃", series_tem);
+
+const chart_battery = create_chart("container_battery", "battery [%]", series_battery);
+
+function update_(data_) {
+    var x_ = (new Date()).getTime();
+    chart_cpu_total.series[0].addPoint({x: x_, y: data_["cpu_data"]["total"]}, true, false);
+<!--    chart_cpu.series[0].addPoint({x: x_, y: data_["cpu_data"]["total"]}, true, false);-->
+    chart_cpu.series[0].addPoint({x: x_, y: data_["cpu_data"]["master"]}, true, false);
+    chart_cpu.series[1].addPoint({x: x_, y: data_["cpu_data"]["im"]}, true, false);
+    chart_cpu.series[2].addPoint({x: x_, y: data_["cpu_data"]["download"]}, true, false);
+    chart_fps.series[0].addPoint({x: x_, y: data_["fps_data"]["test_data_fps"]}, true, false);
+    chart_fps.series[1].addPoint({x: x_, y: data_["fps_data"]["test_data_janky"]}, true, false);
+    chart_fps.series[2].addPoint({x: x_, y: data_["fps_data"]["carton"]}, true, false);
+    chart_mem.series[0].addPoint({x: x_, y: data_["mem_data"]["total_pss"]}, true, false);
+    chart_mem.series[1].addPoint({x: x_, y: data_["mem_data"]["native_pss"]}, true, false);
+    chart_mem.series[2].addPoint({x: x_, y: data_["mem_data"]["dalvik_pss"]}, true, false);
+    chart_mem_ps.series[0].addPoint({x: x_, y: data_["mem_data"]["master"]}, true, false);
+    chart_mem_ps.series[1].addPoint({x: x_, y: data_["mem_data"]["im"]}, true, false);
+    chart_mem_ps.series[2].addPoint({x: x_, y: data_["mem_data"]["download"]}, true, false);
+    chart_net.series[0].addPoint({x: x_, y: data_["net_data"]["test_data_up_net"]}, true, false);
+    chart_net.series[1].addPoint({x: x_, y: data_["net_data"]["test_data_down_net"]}, true, false);
+    chart_net_up.series[0].addPoint({x: x_, y: data_["net_data"]["sen_master"]}, true, false);
+    chart_net_up.series[1].addPoint({x: x_, y: data_["net_data"]["sen_im"]}, true, false);
+    chart_net_up.series[2].addPoint({x: x_, y: data_["net_data"]["sen_download"]}, true, false);
+    chart_net_down.series[0].addPoint({x: x_, y: data_["net_data"]["rec_master"]}, true, false);
+    chart_net_down.series[1].addPoint({x: x_, y: data_["net_data"]["rec_im"]}, true, false);
+    chart_net_down.series[2].addPoint({x: x_, y: data_["net_data"]["rec_download"]}, true, false);
+    chart_tem.series[0].addPoint({x: x_, y: data_["temperature_data"]["battery_temperature"]}, true, false);
+    chart_battery.series[0].addPoint({x: x_, y: data_["battery_level"]}, true, false);
+};
+
+function loadXMLDoc() {
+    var xhttp;
+    if (window.XMLHttpRequest)
+        {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xhttp=new XMLHttpRequest();
+        }
+    else
+        {
+            // IE6, IE5 浏览器执行代码
+            xhttp=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            data = JSON.parse(xhttp.responseText);
+            console.log(data);
+            time_labels.push(data["time"]);
+            cpu_data.push(data["cpu_data"]["total"]);
+            mem_data.push(data["mem_data"]["total_pss"]);
+            fps_data.push(data["fps_data"]["test_data_fps"]);
+            janky_data.push(data["fps_data"]["test_data_janky"]);
+            carton_data.push(data["fps_data"]["carton"]);
+            net_up_data.push(data["net_data"]["test_data_up_net"]);
+            net_down_data.push(data["net_data"]["test_data_down_net"]);
+            battery_temperature_data.push(data["temperature_data"]["battery_temperature"]);
+            battery_level_data.push(data["battery_level"]);
+            update_(data);
+        }
+    };
+    xhttp.open("GET", "get_android_info", true);
+    xhttp.send();
+};
+
+function result_data(){
+    avg_memory = get_avg(mem_data);
+    result_num("avg_memory", avg_memory);
+    max_memory = get_max(mem_data);
+    result_num("max_memory", max_memory);
+    avg_cpu = get_avg(cpu_data);
+    result_num("avg_cpu", avg_cpu);
+    max_cpu = get_max(cpu_data);
+    result_num("max_cpu", max_cpu);
+    avg_fps = get_avg(fps_data);
+    result_num("avg_fps", avg_fps);
+    avg_Jank = get_avg(janky_data);
+    result_num("avg_Jank", avg_Jank);
+    avg_send = get_avg(net_up_data);
+    result_num("avg_send", avg_send);
+    sum_send = get_sum(net_up_data);
+    result_num("sum_send", sum_send);
+    avg_rec = get_avg(net_down_data);
+    result_num("avg_rec", avg_rec);
+    sum_rec = get_sum(net_down_data);
+    result_num("sum_rec", sum_rec);
+    avg_tem = get_avg(battery_temperature_data);
+    result_num("avg_temperature", avg_tem);
+    max_tem = get_max( battery_temperature_data);
+    result_num("max_temperature", max_tem);
+    max_battery_level = get_max(battery_level_data);
+    result_num("max_battery", max_battery_level);
+    avg_battery_level = get_avg(battery_level_data);
+    result_num("avg_battery", avg_battery_level);
+};
+
+function start()
+{
+
+    stopImg = setInterval("loadXMLDoc()", 1000);
+};
+function end()
+{
+    console.log("执行停止函数");
+    clearInterval(stopImg);
+};
+
+function result_num(el_id, num){
+    document.getElementById(el_id).innerHTML = num;
+};
+
+function clear_chart(chart_){
+    var seriesList = chart_.series;
+    var seriesCount=seriesList.length;
+    for(var i = 0;i<categoriesCount;i++){
+        chart.categories[0].remove();
+    }
+};
+
+function get_phone_info(){
+    var phone_info = "";
+    if (window.XMLHttpRequest)
+        {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xhttp=new XMLHttpRequest();
+        }
+    else
+        {
+            // IE6, IE5 浏览器执行代码
+            xhttp=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            data = JSON.parse(xhttp.responseText);
+            console.log(data)
+            for(var key in data){
+                var one_str = key + ":" + data[key] + "\n";
+                phone_info += one_str
+            };
+            alert(phone_info);
+        };
+    };
+    xhttp.open("GET", "get_phone_message", true);
+    xhttp.send();
+};
+
+function export_report(){
+    if (window.XMLHttpRequest)
+        {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xhttp=new XMLHttpRequest();
+        }
+    else
+        {
+            // IE6, IE5 浏览器执行代码
+            xhttp=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            data = JSON.parse(xhttp.responseText);
+            alert("成功生成日志")
+        }
+    };
+    xhttp.open("POST", "result_report", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send("device_sys=android");
+};
+
+
+function request_get(url) {
+    var xhttp;
+    var res;
+    if (window.XMLHttpRequest)
+        {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xhttp=new XMLHttpRequest();
+        }
+    else
+        {
+            // IE6, IE5 浏览器执行代码
+            xhttp=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            res = xhttp.responseText;
+        }
+    };
+    xhttp.open("GET", url, true);
+    xhttp.send();
+    console.log(xhttp.responseText);
+    return res;
+};
+
+
+function request_post(url, body_data) {
+    xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {}
+  };
+    xhttp.open("POST", url, true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(body_data);
+    return xhttp.responseText;
+};
+
+function get_max(nums){
+  var s=nums[0];
+  for(var i=0;i<nums.length;i++){
+      if(s<nums[i]){
+          s=nums[i];
+      }
+  }
+  return s.toFixed(2);
+};
+
+function get_sum(nums){
+  var ret=0;
+  for(var i=0; i<nums.length; i++){
+      ret=ret+Number(nums[i]);
+  };
+  return ret.toFixed(2);
+};
+
+function get_avg(nums){
+  var s_ = get_sum(nums)/(nums.length);
+  return s_.toFixed(2);
+};
+
+function reset_test_data(){
+  window.location.reload();
+};
+
+function create_chart(id_, text_, series_){
+  chart = Highcharts.stockChart(id_, {
+      rangeSelector: {
+          buttons: [{
+                count: 1,
+                type: 'minute',
+                text: '1M'
+          }, {
+                count: 5,
+                type: 'minute',
+                text: '5M'
+          }, {
+                type: 'all',
+                text: 'All'
+          }],
+          inputEnabled: true,
+          selected: 0
+      },
+      tooltip: {
+          pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> ({point.change}%)<br/>',
+    valueDecimals: 2,
+    followTouchMove: false,
+    split: true
+  },
+      title : {
+              style: {
+              color: '#000',
+              font: 'bold 16px "Trebuchet MS", Verdana, sans-serif'
+                  },
+              text : text_
+      },
+      tooltip: {
+              split: true,
+              shared: true,
+      },
+      exporting: {
+              enabled: true
+      },
+      series : series_
+      })
+      return chart
+};
+
+window.onbeforeunload = function(){
+    return "您的文章尚未保存！";
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Android Info</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css"
+          crossorigin="anonymous">
+    <meta name="viewport" content="initial-scale = 1, user-scalable = no">
+    <meta charset="UTF-8">
+    <style>
+        table {
+            width: 500px;
+            height: 110px;
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+		th,
+        tr,
+        td {
+            border: 1px solid #333;
+        }
+        table tr {
+            text-align: center;
+        }
+
+        table img {
+            width: 70px;
+            height: 70px;
+        }
+    </style>
+</head>
+<body>
+    <button type="button" onclick="start()">录制数据</button>
+    <button type="button" onclick="end()">结束录制数据</button>
+    <button onclick="result_data()">生成结果</button>
+    <button class="sel_bt" onclick="reset_test_data()">清空数据重新测试</button>
+    <button class="sel_bt" onclick="get_phone_info()">查看设备信息</button>
+     <button class="sel_bt" onclick="export_report()">生成本地日志</button>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(Memory) [MB]</th>
+            <th>Max(Memory) [MB]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_memory"></td>
+            <td id="max_memory"></td>
+        </tr>
+    </tbody>
+</table>
+<canvas id="memoryChart"></canvas>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(AppCPU) [%]</th>
+            <th>Max(AppCPU) [%]</th>
+            <th>Avg(sys) [%]</th>
+            <th>Max(sys) [%]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_cpu"></td>
+            <td id="max_cpu"></td>
+            <td id="avg_sys"></td>
+            <td id="max_sys"></td>
+        </tr>
+    </tbody>
+</table>
+<canvas id="cpuChart"></canvas>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(FPS)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_fps"></td>
+        </tr>
+    </tbody>
+</table>
+<canvas id="fpsChart"></canvas>
+<table>
+    <thead>
+        <tr>
+            <th>Avg(Send) [KB/s]</th>
+            <th>Sum(Send) [KB]</th>
+            <th>Avg(Recv) [KB/s]</th>
+            <th>Sum(Recv) [KB]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td id="avg_send"></td>
+            <td id="sum_send"></td>
+            <td id="avg_rec"></td>
+            <td id="sum_rec"></td>
+        </tr>
+    </tbody>
+</table>
+<canvas id="netChart"></canvas>
+</body>
+<script>
+const wh = document.body.clientHeight;
+const cpuChart = document.getElementById('cpuChart');
+const memoryChart = document.getElementById('memoryChart');
+const fpsChart = document.getElementById('fpsChart');
+const netChart = document.getElementById('netChart');
+cpuChart.height = wh / 8;
+memoryChart.height = wh / 8;
+fpsChart.height = wh / 8;
+netChart.height = wh / 8;
+const cpu_ctx = cpuChart.getContext('2d');
+const mem_ctx = memoryChart.getContext('2d');
+const fps_ctx = fpsChart.getContext('2d');
+const net_ctx = netChart.getContext('2d');
+<!--var time_labels = [];-->
+var cpu_time_labels = [];
+var fps_time_labels = [];
+var mem_time_labels = [];
+var net_time_labels = [];
+var cpu_data = [];
+var sys_value = [];
+var mem_data = [];
+var fps_data = [];
+var downFlow = [];
+var upFlow = [];
+const cpu_chart = new Chart(cpu_ctx, {
+        // The type of chart we want to create
+        type: 'line',
+        // The data for our dataset
+        data: {
+            labels: cpu_time_labels,
+            datasets: [{
+                label: 'CPU',
+                // backgroundColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                borderColor: 'rgb(193 255 193)',
+                data: cpu_data
+            },{
+                label: 'sys',
+                // backgroundColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                borderColor: 'rgb(255, 99, 132)',
+                data: sys_value
+            }]
+        },
+        // Configuration options go here
+        options: {scales: {yAxes: [{scaleLabel: {display: true, labelString: "%"}}]}}
+    });
+const mem_chart = new Chart(mem_ctx, {
+        // The type of chart we want to create
+        type: 'line',
+        // The data for our dataset
+        data: {
+            labels: mem_time_labels,
+            datasets: [{
+                label: 'MEMORY',
+                // backgroundColor: 'rgb(193 255 193)',
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                borderColor: 'rgb(193 255 193)',
+                data: mem_data
+            }]
+        },
+        // Configuration options go here
+        options: {scales: {yAxes: [{scaleLabel: {display: true, labelString: "MB"}}]}}
+    });
+const fps_chart = new Chart(fps_ctx, {
+        // The type of chart we want to create
+        type: 'line',
+        // The data for our dataset
+        data: {
+            labels: fps_time_labels,
+            datasets: [{
+                label: 'FPS',
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                borderColor: 'rgb(65,105,225)',
+                data: fps_data
+            }]
+        },
+        // Configuration options go here
+       options: {scales: {yAxes: [{scaleLabel: {display: true, labelString: "FPS"}}]}}
+    });
+const net_chart = new Chart(net_ctx, {
+    // The type of chart we want to create
+    type: 'line',
+    // The data for our dataset
+    data: {
+        labels: net_time_labels,
+        datasets: [{
+            label: 'TOTAL DOWN NET',
+            // backgroundColor: 'rgb(193 255 193)',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            borderColor: 'rgb(0,255,255)',
+            data: downFlow
+        },{
+            label: 'TOTAL UP NET',
+            // backgroundColor: 'rgb(193 255 193)',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            borderColor: 'rgb(176,224,230)',
+            data: upFlow
+        }]
+    },
+    // Configuration options go here
+    options: {scales: {yAxes: [{scaleLabel: {display: true, labelString: "KB"}}]}}
+});
+function loadXMLDoc()
+{
+	var xmlhttp;
+	if (window.XMLHttpRequest)
+	{
+		//  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+		xmlhttp=new XMLHttpRequest();
+	}
+	else
+	{
+		// IE6, IE5 浏览器执行代码
+		xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	xmlhttp.onreadystatechange=function()
+	{
+		if (xmlhttp.readyState==4 && xmlhttp.status==200)
+		{
+            data = JSON.parse(xmlhttp.responseText);
+            if (data.cpu){
+                extend(cpu_time_labels, data["cpu"]["timestamp"]);
+                extend(cpu_data, data["cpu"]["app_value"]);
+                extend(sys_value, data["cpu"]["sys_value"]);
+                cpu_chart.data.datasets[0].data = cpu_data;
+                cpu_chart.data.datasets[1].data = sys_value;
+                cpu_chart.update();
+            };
+            if (data.mem){
+                extend(mem_time_labels, data["mem"]["timestamp"]);
+                extend(mem_data, data["mem"]["mem_data"]);
+                mem_chart.data.datasets[0].data = mem_data;
+                mem_chart.update();
+            };
+            if (data.fps){
+                extend(fps_time_labels, data["fps"]["timestamp"]);
+                extend(fps_data, data["fps"]["fps_data"]);
+                fps_chart.data.datasets[0].data = fps_data;
+                fps_chart.update();
+            };
+            if (data.net){
+                net_time_labels.push(data["net"]["timestamp"]);
+                upFlow.push(data["net"]["upFlow"]);
+                downFlow.push(data["net"]["downFlow"]);
+                net_chart.data.datasets[0].data = downFlow;
+                net_chart.data.datasets[1].data = upFlow;
+                net_chart.update();
+            };
+		}
+	}
+	xmlhttp.open("GET","http://127.0.0.1:8000/get_one_ios_info",true);
+	xmlhttp.send();
+};
+function switch_(sw)
+{
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "http://127.0.0.1:8000/init_ios_script", true);
+    xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+    xhr.send("switch_="+sw);
+};
+function result_data(){
+    avg_memory = get_avg(mem_data);
+    result_num("avg_memory", avg_memory);
+    max_memory = get_max(mem_data);
+    result_num("max_memory", max_memory);
+    avg_cpu = get_avg(cpu_data);
+    result_num("avg_cpu", avg_cpu);
+    max_cpu = get_max(cpu_data);
+    result_num("max_cpu", max_cpu);
+    avg_sys = get_avg(sys_value);
+    result_num("avg_sys", avg_sys);
+    max_sys = get_max(sys_value);
+    result_num("max_sys", max_sys);
+    avg_fps = get_avg(fps_data);
+    result_num("avg_fps", avg_fps);
+    avg_send = get_avg(upFlow);
+    result_num("avg_send", avg_send);
+    sum_send = get_sum(upFlow);
+    result_num("sum_send", sum_send);
+    avg_rec = get_avg(downFlow);
+    result_num("avg_rec", avg_rec);
+    sum_rec = get_sum(downFlow);
+    result_num("sum_rec", sum_rec);
+};
+function start()
+{
+    switch_("on");
+    a = setInterval("loadXMLDoc()", 1000);
+};
+function end()
+{
+    switch_("off");
+    clearInterval(a);
+};
+function result_num(el_id, num){
+    document.getElementById(el_id).innerHTML = num;
+};
+function get_max(nums){
+    var s=nums[0];
+    for(var i=0;i<nums.length;i++){
+        if(s<nums[i]){
+            s=nums[i];
+        }
+    }
+    return s.toFixed(2);
+};
+function get_sum(nums){
+    var ret=0;
+    for(var i=0; i<nums.length; i++){
+        ret=ret+Number(nums[i]);
+    };
+    return ret.toFixed(2);
+};
+function get_avg(nums){
+    var s_ = get_sum(nums)/(nums.length);
+    return s_.toFixed(2);
+};
+function extend(arr_f, arr_c){
+    for(j = 0, len=arr_c.length; j<len; j++){
+        arr_f.push(arr_c[j]);
+    }
+    return arr_f;
+};
+
+window.onbeforeunload = function(){
+    return "您的文章尚未保存！";
+};
+
+function reset_test_data (){
+    window.location.reload();
+};
+
+function get_phone_info(){
+    var phone_info = "";
+    if (window.XMLHttpRequest)
+        {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xhttp=new XMLHttpRequest();
+        }
+    else
+        {
+            // IE6, IE5 浏览器执行代码
+            xhttp=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            data = JSON.parse(xhttp.responseText);
+            console.log(data)
+            for(var key in data){
+                var one_str = key + "   " + data[key] + "\n";
+                phone_info += one_str
+            };
+            alert(phone_info);
+        };
+    };
+    xhttp.open("GET", "get_phone_message", true);
+    xhttp.send();
+};
+
+function export_report(){
+    if (window.XMLHttpRequest)
+        {
+            xhttp=new XMLHttpRequest();
+        }
+    else
+        {
+            xhttp=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            data = JSON.parse(xhttp.responseText);
+            alert("成功生成日志")
+        }
+    };
+    xhttp.open("POST", "result_report", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send("device_sys=ios");
+};
+
+</script>
+</html>
