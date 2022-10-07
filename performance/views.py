@@ -199,3 +199,23 @@ def init_result_data():
         "battery": [],
     }
 
+
+def get_ios_sq_info(request):
+    """获得一次ios设备数据"""
+    data = {}
+    cpu_info = co.get_cpu_info()
+    fps_info = co.get_fps_info()
+    mem_info = co.get_mem_info()
+    net_info = co.get_net_info()
+    if cpu_info:
+        data.update(cpu_info)
+    if fps_info:
+        data.update(fps_info)
+    if mem_info:
+        data.update(mem_info)
+    if net_info:
+        data.update(net_info)  # todo:工具无法抓取准确数据
+    print(f"一帧的数据是{data}")
+    return HttpResponse(json.dumps(data))
+
+
