@@ -1,6 +1,6 @@
 from threading import Thread
 from django.shortcuts import render
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpResponse
 from performance import utils, get_android_info, get_ios_info
 from performance.report.make_report import add_test_data, get_result_data, get_report_template, get_ios_result_data
 import queue
@@ -8,38 +8,13 @@ import json
 import time
 
 
-package_name = ""
-cpu_q = queue.Queue()
-fps_q = queue.Queue()
-net_q = queue.Queue()
-mem_q = queue.Queue()
-
-ios_data = dict()
-android_data = {
-    "time": [],
-    "total_cpu": [],
-    "master_cpu": [],
-    "im_cpu": [],
-    "download_cpu": [],
-    "fps": [],
-    "jancky": [],
-    "total_mem": [],
-    "native_mem": [],
-    "dalvik_mem": [],
-    "master_ps": [],
-    "im_ps": [],
-    "download_ps": [],
-    "net_up": [],
-    "net_down": [],
-    "master_up": [],
-    "im_up": [],
-    "download_up": [],
-    "master_down": [],
-    "im_down": [],
-    "download_down": [],
-    "battery_temperature": [],
-    "battery": [],
-}
+def get_test_q():
+    """获得测试数据的消息队列"""
+    cpu_q = queue.Queue()
+    fps_q = queue.Queue()
+    net_q = queue.Queue()
+    mem_q = queue.Queue()
+    return cpu_q, fps_q, net_q, mem_q
 
 
 def performance_main_view(request):
@@ -69,12 +44,17 @@ def select_test_template(request):
     test_package_name = request.POST.get("select_value")
     request.session["test_package_name"] = test_package_name  # 测试包名存入session
     sys = request.COOKIES.get("device_sys")
+    data_m = init_data(sys)  # 初始化数据格式
+    request.session["test_data"] = data_m  # 测试数据放到session中
     template = ""
     if sys == "android":
         template = "android_template.html"
         print("选中了安卓的测试页面")
     elif sys == "ios":
         template = "ios_template.html"
+        cpu_q, fps_q, net_q, mem_q = get_test_q()
+        co = get_ios_info.IosInfo(test_package_name, cpu_q, fps_q, net_q, mem_q)
+        request.session["co"] = co  # 实例化的ios类对象
         print("选中了ios的测试页面")
     else:
         print("没有选中测试系统")
@@ -111,18 +91,16 @@ def get_android_performance_info(request):
         t += 1
     data.update({"time": time_time_label})
     print(f"{time_time_label}帧的数据是{data}")
-    global android_data
-    android_data = add_test_data(data, android_data)  # 归档测试数据
+    request.session["test_data"] = add_test_data(data, request.session["test_data"])  # 归档测试数据
     return HttpResponse(json.dumps(data))
 
 
 def ios_collect(request):
     """ios性能收集脚本开关"""
-    pac_name = request.COOKIES.get("test_package_name")
+    # pac_name = request.COOKIES.get("test_package_name")
     switch_ = request.POST.get("switch_")
+    co = request.session["co"]
     if switch_ == "on":
-        global co
-        co = get_ios_info.IosInfo(pac_name, cpu_q, fps_q, net_q, mem_q)
         co.start_collect()
     elif switch_ == "off":
         co.stop_collect()
@@ -151,58 +129,65 @@ def result_report(request):
     sys = request.COOKIES.get("device_sys")
     # try:
     if sys == "android":
+        data = request.session["test_data"]
         test_phone_info = utils.get_android_phone_info()
         result_dict["test_phone_info"] = test_phone_info
-        result_dict["test_data_info"] = android_data
-        result_dict["test_result_info"] = get_result_data(android_data)
+        result_dict["test_data_info"] = data
+        result_dict["test_result_info"] = get_result_data(data)
         get_report_template(sys, result_dict)
+        request.session["test_data"] = init_data(sys)  # 清空测试数据
     elif sys == "ios":
         test_phone_info = utils.get_ios_phone_info()
         result_dict["test_phone_info"] = test_phone_info
-        ios_data = co.get_report_data()
-        result_dict["test_data_info"] = ios_data
-        result_dict["test_result_info"] = get_ios_result_data(ios_data)
+        co = request.session["co"]
+        ios_report_data = co.get_report_data()
+        result_dict["test_data_info"] = ios_report_data
+        result_dict["test_result_info"] = get_ios_result_data(ios_report_data)
         get_report_template(sys, result_dict)
-    init_result_data()  # 清空测试数据
+        request.session["test_data"] = init_data(sys)  # 清空测试数据
     return HttpResponse(json.dumps("生成报告成功"))
     # except:
     #     return HttpResponse(json.dumps("生成报告失败"))
 
 
-def init_result_data():
-    """初始化测试结果集合"""
-    global ios_data, android_data
-    ios_data = dict()
-    android_data = {
-        "time": [],
-        "total_cpu": [],
-        "master_cpu": [],
-        "im_cpu": [],
-        "download_cpu": [],
-        "fps": [],
-        "jancky": [],
-        "total_mem": [],
-        "native_mem": [],
-        "dalvik_mem": [],
-        "master_ps": [],
-        "im_ps": [],
-        "download_ps": [],
-        "net_up": [],
-        "net_down": [],
-        "master_up": [],
-        "im_up": [],
-        "download_up": [],
-        "master_down": [],
-        "im_down": [],
-        "download_down": [],
-        "battery_temperature": [],
-        "battery": [],
-    }
+def init_data(sys):
+    """初始化测试数据"""
+    data = dict()
+    if sys == "android":
+        data = {
+            "time": [],
+            "total_cpu": [],
+            "master_cpu": [],
+            "im_cpu": [],
+            "download_cpu": [],
+            "fps": [],
+            "jancky": [],
+            "total_mem": [],
+            "native_mem": [],
+            "dalvik_mem": [],
+            "master_ps": [],
+            "im_ps": [],
+            "download_ps": [],
+            "net_up": [],
+            "net_down": [],
+            "master_up": [],
+            "im_up": [],
+            "download_up": [],
+            "master_down": [],
+            "im_down": [],
+            "download_down": [],
+            "battery_temperature": [],
+            "battery": [],
+        }
+    elif sys == "ios":
+        pass
+    return data
 
 
 def get_ios_sq_info(request):
     """获得一次ios设备数据"""
     data = {}
+    co = request.session["co"]
     cpu_info = co.get_cpu_info()
     fps_info = co.get_fps_info()
     mem_info = co.get_mem_info()
@@ -217,5 +202,3 @@ def get_ios_sq_info(request):
         data.update(net_info)  # todo:工具无法抓取准确数据
     print(f"一帧的数据是{data}")
     return HttpResponse(json.dumps(data))
-
-
