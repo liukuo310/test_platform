@@ -1,5 +1,5 @@
 from performance.utils import doc_shell
-from tidevice._perf import DataType, iter_network_flow
+from tidevice._perf import DataType
 import copy
 import os
 import time

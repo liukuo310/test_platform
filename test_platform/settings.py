@@ -44,7 +44,9 @@ INSTALLED_APPS = [
     #  rest风格
     'rest_framework',
     #  客户端性能测试应用
-    'performance.apps.PerformanceConfig'
+    'performance.apps.PerformanceConfig',
+    #  接口测试平台
+    'api_platform.apps.ApiPlatformConfig'
 ]
 
 MIDDLEWARE = [
@@ -139,7 +141,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
-#允许所有的请求头
+# 允许所有的请求头
 CORS_ALLOW_HEADERS = ('*')
 
 
