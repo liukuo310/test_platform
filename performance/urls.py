@@ -2,7 +2,7 @@ from django.urls import path
 from performance import views
 
 urlpatterns = [
-    path('performance_main/', views.performance_main_view, name="performance_main_view"),
+    path('performance_main', views.performance_main_view, name="performance_main_view"),
     path('get_device_info', views.get_device_info, name="get_device_info"),
     path('select_test_template', views.select_test_template, name="select_test_template"),
     path('get_android_info', views.get_android_performance_info, name='android_info'),  # 获得一帧安卓设备数据
