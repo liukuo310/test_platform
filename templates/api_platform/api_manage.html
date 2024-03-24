@@ -1,10 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>api_manage_view</title>
+<meta charset="UTF-8">
+<title>api_manage_view</title>
+<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js">
+</script>
 </head>
 <body>
-    <p>接口管理界面</p>
+    <h1 style="text-align: center;">接口管理</h1>
+    <div>
+        <h2 id="myapi">我的接口</h2>
+            <h3>修改接口</h3>
+        <button id="create_api">创建接口</button><br>
+            接口名称:<input type="text" name="name" /><br>
+            地址:<input type="text" name="url" /><br>
+            请求方式:<input type="text" name="method" /><br>
+            请求头:<input type="text" name="headers" /><br>
+            请求体:<input type="text" name="body" /><br>
+            注释:<input type="text" name="annotation" />
+        <h2>已发布接口</h2>
+    </div>
+    <div>
+<!--        创建接口半瓶弹窗-->
+    </div>
 </body>
+<script>
+$(document).ready(function(){
+    $("#create_api").click(function(){
+        $.post("SetApi",{
+            name:document.getElementsByName('name').value,
+            url:document.getElementsByName('url').value,
+            method:document.getElementsByName('method').value,
+            headers:document.getElementsByName('headers').value,
+            body:document.getElementsByName('body').value,
+            annotation:document.getElementsByName('annotation').value
+        },function(){
+            console.log("成功请求")
+        },status)
+    })
+})
+</script>
 </html>

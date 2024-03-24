@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>api_main</title>
+</head>
+<body>
+    <input type="text" class="paixu" data-id='11' value="0" style="width: 40px;">
+
+</body>
+<script>
+    $(document).ready(function(){
+        $( ".paixu" ).blur( "click", function() {
+            var id = $( this ).data('id');
+            var paixu = $( this ).val();
+            $.ajax({
+                type:'post',
+                url:'?Action=paixu',
+                data:{id: id,paixu:paixu},
+                cache:false,
+                dataType:'json',
+                success:function(result){
+                    if(result['type']==1){
+                        alert(result['msg']);
+                    }
+                }
+            });
+        });
+    });
+    </script>
+    
+</html>
