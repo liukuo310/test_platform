@@ -7,4 +7,3 @@ urlpatterns = [
     path('api_manage_view', views.api_manage_view, name='api_manage_view'),
     path('ci_di', views.ci_di, name='ci_di'),
 ]
-
