@@ -35,7 +35,7 @@ def login(request):
         else:
             request.session["count"] = count_
             request.session["user_password"] = user_password['password']
-            return redirect("main_view/")
+            return redirect("main_view")
 
 
 def main_view(request):
