@@ -2,59 +2,41 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>平台首页</title>
-    <style type="text/css">
-        body {
-            background-color: #f4f4f9; /* 更改背景颜色为浅灰色 */
-            font-family: Arial, sans-serif; /* 设置字体 */
-            margin: 0; /* 去除默认的body边距 */
-            padding: 0; /* 去除默认的body填充 */
-        }
-        #select_list {
-            line-height: 30px;
-            background-color: #e0f7fa; /* 更改背景颜色为浅青色 */
-            height: 300px;
-            width: 200px; /* 增加宽度 */
-            float: left;
-            padding: 10px; /* 增加填充 */
-            margin: 20px; /* 增加外边距 */
-            border-radius: 5px; /* 圆角边框 */
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 添加阴影 */
-        }
-        #select_list a {
-            text-decoration: none; /* 去除链接下划线 */
-            display: block; /* 块级元素，使链接充满整个button */
-        }
-        #select_list button {
-            width: 100%; /* 按钮宽度占满父元素 */
-            height: 50px; /* 降低按钮高度 */
-            background-color: #00acc1; /* 设置按钮背景颜色为青色 */
-            color: white; /* 设置文字颜色为白色 */
-            border: none; /* 去除边框 */
-            border-radius: 5px; /* 圆角边框 */
-            cursor: pointer; /* 鼠标悬停时变为指向手型 */
-            transition: background-color 0.3s; /* 添加背景颜色过渡效果 */
-            margin-bottom: 10px; /* 增加按钮之间的间隔 */
-        }
-        #select_list button:last-child {
-            margin-bottom: 0; /* 最后一个按钮不需要底部间隔 */
-        }
-        #select_list button:hover {
-            background-color: #00838f; /* 悬停时按钮背景颜色加深 */
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 </head>
-<body>
-    <div id="select_list">
-        <a href="/case_management">
-            <button>用例管理平台</button>
-        </a>
-        <a href="/api_platform/api_main_view">
-            <button>接口测试平台</button>
-        </a>
-        <a href="/performance/performance_main">
-            <button>性能测试平台</button>
-        </a>
-    </div>
+<body class="bg-gray-100 font-sans">
+    <header class="bg-blue-600 text-white py-6">
+        <div class="container mx-auto text-center">
+            <h1 class="text-4xl font-bold">测试平台主页</h1>
+            <p class="mt-2">提供全面的测试解决方案</p>
+        </div>
+    </header>
+    <main class="container mx-auto py-8">
+        <div id="select_list" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <a href="/case_management" class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300">
+                <i class="fa-solid fa-list-check text-3xl text-blue-600 mb-4"></i>
+                <h2 class="text-xl font-bold text-gray-800">用例管理平台</h2>
+                <p class="mt-2 text-gray-600">高效管理测试用例，提升测试效率。</p>
+            </a>
+            <a href="/api_platform/api_main_view" class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300">
+                <i class="fa-solid fa-plug text-3xl text-blue-600 mb-4"></i>
+                <h2 class="text-xl font-bold text-gray-800">接口测试平台</h2>
+                <p class="mt-2 text-gray-600">专业的接口测试工具，保障接口质量。</p>
+            </a>
+            <a href="/performance/performance_main" class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition duration-300">
+                <i class="fa-solid fa-chart-line text-3xl text-blue-600 mb-4"></i>
+                <h2 class="text-xl font-bold text-gray-800">性能测试平台</h2>
+                <p class="mt-2 text-gray-600">精准评估系统性能，优化系统体验。</p>
+            </a>
+        </div>
+    </main>
+    <footer class="bg-gray-200 py-4 mt-8">
+        <div class="container mx-auto text-center text-gray-600">
+            <p>&copy; 个人自主学习项目</p>
+        </div>
+    </footer>
 </body>
 </html>

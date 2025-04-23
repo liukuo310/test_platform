@@ -2,11 +2,136 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>api_main</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <!-- 引入Chart.js库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <a href="case_manage_view">接口管理</a>
-    <a href="api_manage_view">接口用例管理</a>
-    <a href="ci_di">持续集成</a>
+<body class="bg-gray-100 h-screen flex">
+    <!-- 侧边导航栏 -->
+    <div class="bg-white w-64 h-full shadow-md">
+        <div class="p-4 space-y-4">
+            <a href="case_manage_view" class="block text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-2 rounded-md">
+                <i class="fa-solid fa-list mr-2"></i> 用例管理
+            </a>
+            <a href="api_manage_view" class="block text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-2 rounded-md">
+                <i class="fa-solid fa-file-lines mr-2"></i> 接口管理
+            </a>
+            <a href="ci_di" class="block text-gray-700 hover:text-blue-600 hover:bg-gray-100 p-2 rounded-md">
+                <i class="fa-solid fa-sync mr-2"></i> 持续集成
+            </a>
+        </div>
+    </div>
+    <!-- 接口返回数据显示区域 -->
+    <div class="flex-1 p-8 overflow-y-auto">
+        <div class="bg-white p-6 rounded-lg shadow-md h-full">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">接口用例情况</h2>
+            <div class="flex justify-between" >
+                <div class="w-1/4 p-4">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">接口总数: {{ all_api_count }}</h3>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">发布接口数: {{ publish_api_count }}</h3>
+                    <canvas id="api-chart" class="h-full"></canvas>
+                </div>
+                <div class="w-1/4 p-4" >
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">用例总数: {{ all_case_count }}</h3>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">发布用例数: {{ publish_case_count }}</h3>
+                    <canvas id="case-chart" class="h-full"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 创建接口扇形统计图
+            const apiCtx = document.getElementById('api-chart').getContext('2d');
+            const apiChart = new Chart(apiCtx, {
+                type: 'doughnut', // 扇形统计图
+                data: {
+                    labels: ['未发布接口数', '发布接口数'],
+                    datasets: [{
+                        label: '接口情况',
+                        data: [{{ all_api_count }}-{{ publish_api_count }}, {{ publish_api_count }}],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 创建用例扇形统计图
+            const caseCtx = document.getElementById('case-chart').getContext('2d');
+            const caseChart = new Chart(caseCtx, {
+                type: 'doughnut', // 扇形统计图
+                data: {
+                    labels: ['未发布用例数', '发布用例数'],
+                    datasets: [{
+                        label: '用例情况',
+                        data: [{{ all_case_count }}-{{ publish_case_count }}, {{ publish_case_count }}],
+                        backgroundColor: [
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -13,9 +13,9 @@ class Api(models.Model):
     headers = models.CharField(max_length=60, verbose_name="请求头")
     method = models.CharField(max_length=60, verbose_name="请求方式")
     body = models.CharField(max_length=60, verbose_name="请求体")
-    annotation = models.CharField(max_length=60, verbose_name="接口注释")
-    case = models.ForeignKey("Case", on_delete=models.CASCADE)
-
+    params = models.CharField(max_length=60, verbose_name="请求参数")
+    desc = models.CharField(max_length=60, verbose_name="接口注释", null=True)
+    publish = models.BooleanField(verbose_name="接口是否发布", null=True)
 
 class Case(models.Model):
     name = models.CharField(max_length=60, verbose_name="用例名称")
