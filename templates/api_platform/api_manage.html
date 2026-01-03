@@ -1,43 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>api_manage_view</title>
-<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js">
-</script>
-</head>
-<body>
-    <h1 style="text-align: center;">接口管理</h1>
-    <div>
-        <h2 id="myapi">我的接口</h2>
-            <h3>修改接口</h3>
-        <button id="create_api">创建接口</button><br>
-            接口名称:<input type="text" name="name" /><br>
-            地址:<input type="text" name="url" /><br>
-            请求方式:<input type="text" name="method" /><br>
-            请求头:<input type="text" name="headers" /><br>
-            请求体:<input type="text" name="body" /><br>
-            注释:<input type="text" name="annotation" />
-        <h2>已发布接口</h2>
-    </div>
-    <div>
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>api_manage_view</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .close {
+            color: #9ca3af;
+            float: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #1f2937;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <!-- 创建接口弹窗 -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 class="text-xl font-bold mb-4">创建接口</h2>
+            <div class="mb-3">
+                <label for="create_name" class="block text-sm font-medium text-gray-700">接口名称</label>
+                <input type="text" id="create_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="create_url" class="block text-sm font-medium text-gray-700">域名</label>
+                <input type="text" id="create_url" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="create_api_path" class="block text-sm font-medium text-gray-700">接口路径</label>
+                <input type="text" id="create_api_path" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="create_method" class="block text-sm font-medium text-gray-700">请求方式</label>
+                <select id="create_method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="create_headers" class="block text-sm font-medium text-gray-700">请求头</label>
+                <input type="text" id="create_headers" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-3">
+                <label for="create_body" class="block text-sm font-medium text-gray-700">请求体</label>
+                <input type="text" id="create_body" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-4">
+                <label for="create_annotation" class="block text-sm font-medium text-gray-700">注释</label>
+                <input type="text" id="create_annotation" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <button id="confirm_create" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">确定</button>
+        </div>
+    </div>
+    <div class="container mx-auto py-4 px-4">
+        <button id="create_api" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mb-2">创建接口</button>
+        <div class="bg-white p-4 rounded-md shadow-md">
+            <h2 class="text-lg font-bold mb-2">查询接口</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="query_author" class="block text-sm font-medium text-gray-700">接口作者</label>
+                    <input type="text" id="query_author" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_name" class="block text-sm font-medium text-gray-700">接口名称</label>
+                    <input type="text" id="query_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_url" class="block text-sm font-medium text-gray-700">域名</label>
+                    <input type="text" id="query_url" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="query_api_url" class="block text-sm font-medium text-gray-700">地址</label>
+                    <input type="text" id="query_api_url" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="query_method" class="block text-sm font-medium text-gray-700">请求方式</label>
+                    <select id="query_method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="query_headers" class="block text-sm font-medium text-gray-700">请求头</label>
+                    <input type="text" id="query_headers" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_body" class="block text-sm font-medium text-gray-700">请求体</label>
+                    <input type="text" id="query_body" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="col-span-2">
+                    <label for="query_annotation" class="block text-sm font-medium text-gray-700">注释</label>
+                    <input type="text" id="query_annotation" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+            <button id="query_api" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mt-4">查询</button>
+        </div>
+        <div id="result_list" class="mt-4 bg-white p-4 rounded-md shadow-md h-auto">
+            <h2 class="text-lg font-bold mb-2">查询结果</h2>
+            <ul id="results" class="list-disc list-inside"></ul>
+        </div>
     </div>
 </body>
+
+<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
 <script>
-$(document).ready(function(){
-    $("#create_api").click(function(){
-        $.post("SetApi",{
-            name:document.getElementsByName('name').value,
-            url:document.getElementsByName('url').value,
-            method:document.getElementsByName('method').value,
-            headers:document.getElementsByName('headers').value,
-            body:document.getElementsByName('body').value,
-            annotation:document.getElementsByName('annotation').value
-        },function(){
-            console.log("成功请求")
-        },status)
-    })
-})
+    $(document).ready(function () {
+        var baseUrl = "http://localhost:8000/api_platform/";
+        var createApiPath = "set_api/";
+        var queryApiPath = "QueryApi/";
+
+
+        // 显示创建接口弹窗
+        $("#create_api").click(function () {
+            $("#myModal").css("display", "block");
+        });
+
+        // 关闭弹窗
+        $(".close").click(function () {
+            $("#myModal").css("display", "none");
+        });
+
+        // 点击确定创建接口
+        $("#confirm_create").click(function () {
+            var fullCreateApiUrl = baseUrl + createApiPath; // 拼接完整的接口地址
+
+            var postData = {
+                api_hoster: $("#create_name").val(),
+                api_name: $("#create_name").val(),
+                api_url: $("#create_url").val(),
+                api_path: $("#create_api_path").val(),
+                api_method: $("#create_method").val(),
+                api_header: $("#create_headers").val(),
+                api_body: $("#create_body").val(),
+                api_params: $("#create_api_params").val(),  // 假设你有一个用于参数的输入框
+                api_desc: $("#create_annotation").val()
+            };
+
+            $.ajax({
+                url: fullCreateApiUrl,
+                type: "POST",
+                contentType: "application/json",  // 设置正确的 Content-Type 头
+                data: JSON.stringify(postData),  // 将数据转换为 JSON 字符串
+                success: function () {
+                    console.log("成功请求");
+                    alert("创建接口成功");
+                    $("#myModal").css("*display", "none");
+                },
+                error: function (xhr, status, error) {
+                    console.log("请求失败", error);
+                    alert("请求失败: " + error);
+                }
+            });
+        });
+
+        // 点击查询接口
+        $("#query_api").click(function () {
+            var queryUrl = $("#query_url").val(); // 读取域名
+            var queryApiPath = $("#query_api_url").val(); // 读取接口路径
+            var fullQueryApiUrl = queryUrl + queryApiPath; // 拼接完整的接口地址
+
+            var queryData = {
+                author: $("#query_author").val(),
+                name: $("#query_name").val(),
+                url: $("#query_url").val(),
+                api_url: $("#query_api_url").val(),
+                method: $("#query_method").val(),
+                headers: $("#query_headers").val(),
+                body: $("#query_body").val(),
+                annotation: $("#query_annotation").val()
+            };
+
+            $.ajax({
+                url: fullQueryApiUrl,
+                type: "POST",
+                contentType: "application/json",  // 设置正确的 Content-Type 头
+                data: JSON.stringify(queryData),  // 将数据转换为 JSON 字符串
+                success: function (data) {
+                    // 清空结果列表
+                    $("#results").empty();
+                    // 遍历返回的数据并添加到列表中
+                    $.each(data, function (index, item) {
+                        var listItem = $("<li></li>");
+                        listItem.append("<p class='font-bold'>接口作者: " + item.author + "</p>");
+                        listItem.append("<p>接口名称: " + item.name + "</p>");
+                        listItem.append("<p>接口域名: " + item.url + "</p>");
+                        listItem.append("<p>接口地址: " + item.api_url + "</p>");
+                        listItem.append("<p>请求方式: " + item.method + "</p>");
+                        listItem.append("<p>请求头: " + item.headers + "</p>");
+                        listItem.append("<p>请求体: " + item.body + "</p>");
+                        listItem.append("<p>注释: " + item.annotation + "</p>");
+                        $("#results").append(listItem);
+                    });
+                },
+                error: function (xhr, status, error) {
+                    console.log("请求失败", error);
+                }
+            });
+        });
+    });
 </script>
+
 </html>

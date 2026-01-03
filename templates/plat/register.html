@@ -8,7 +8,7 @@ body{text-align:center}
 </style>
 </head>
 <body>
-<form action="register" method="post" id="register" name="register_form">
+<form action="http://127.0.0.1:8000/test_plat/register/" method="post" id="register" name="register_form">
     <p>账号:<input name="count" id="count" type="text" /></p>
     <p>密码:<input name="password" id="password" type="text" /></p>
     <p>确认密码:<input name="re_password" id="re_password" type="text" /></p>
@@ -18,8 +18,8 @@ body{text-align:center}
 </form>
 <script>
     function del_count(){
-    document.getElementById("register").method="get";
-    document.getElementById("register").submit;
+        document.getElementById("register").method="get";
+        document.getElementById("register").submit;
     }
 </script>
 </body>

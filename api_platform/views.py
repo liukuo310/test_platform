@@ -1,11 +1,5 @@
 import json
 
-from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
-from django.views.generic import View
-
-from api_platform.models import Api, Case
-
 
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -47,6 +41,7 @@ def api_main_view(request):
 
 def api_manage_view(request):
     """接口管理页面"""
+    print("接口管理页面")
     return render(request, "api_platform/api_manage.html")
 
 
@@ -64,7 +59,24 @@ class SetApi(View):
     """接口操作接口"""
     def put(self, request):
         """更新接口"""
-        api = request.Get("")
+        api_data = request.body.decode('utf-8')
+        data = json.loads(api_data)
+        print(f"传递的参数是:{data}")
+        api_id = data.get("api_id")
+        if not api_id:
+            return JsonResponse({'message': 'Invalid API ID'}, status=400)
+        try:
+            api_data = Api.objects.get(id=api_id)
+        except Api.DoesNotExist:
+            return JsonResponse({'message': 'API not found'}, status=404)
+        for key, value in data.items():
+            if key == "api_id":
+                continue
+            if hasattr(api_data, key):
+                setattr(api_data, key, value)
+        api_data.save()
+        return JsonResponse({'message':"Update API successfully"}, status=200)
+
 
     def get(self, request):
         """获取接口"""
@@ -74,29 +86,30 @@ class SetApi(View):
     def post(self, request):
         """创建接口"""
         try:
-            request_body = request.body.decode('utf-8')
-            data = json.loads(request_body)
-            print(f"传递的参数是:{data}")
+            data = json.loads(request.body)
             api_hoster = data.get("api_hoster")
             api_name = data.get("api_name")
             api_url = data.get("api_url")
+            api_path = data.get("api_path")
             api_method = data.get("api_method", "GET")
             api_header = data.get("api_header")
             api_body = data.get("api_body")
             api_params = data.get("api_params")
             api_desc = data.get("api_desc")
             api = Api(
-                name = api_name,
-                url = api_url,
+                name=api_name,
+                hoster_name = api_hoster,
+                base_url = api_url,
+                api_path = api_path,
                 method = api_method,
                 headers = api_header,
                 body = api_body,
                 params = api_params,
                 desc = api_desc,
-                publish = True
+                publish = False  # 默认不发布
             )
             api.save()
-
+            return JsonResponse({'message': 'Create API successfully'}, status=201)
         except json.JSONDecodeError:
             return JsonResponse({'message': 'Invalid JSON format'}, status=400)
         except Exception as e:
@@ -104,7 +117,17 @@ class SetApi(View):
 
     def delete(self, request):
         """删除接口"""
-        pass
+        try:
+            api_id = request.GET.get("api_id")
+            if not api_id:
+                return JsonResponse({'message': 'Invalid API ID'}, status=400)
+            api = Api.objects.get(id=api_id)
+            if not api:
+                return JsonResponse({'message': 'API not found'}, status=404)
+            api.delete()
+            return JsonResponse({'message': 'Delete API successfully'}, status=200)
+        except Exception as e:
+            return JsonResponse({'message': str(e)}, status=500)
 
 
 class SetCase(View):

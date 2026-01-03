@@ -1,3 +1,6 @@
+import random
+import time
+
 from django.shortcuts import render, redirect
 from django.http import HttpRequest, HttpResponse
 from plat.models import User
@@ -65,7 +68,7 @@ class Register(View):
         # print(f"数据库中的账号情况：{count_list}")
         # print(len(str(count)))
         if len(str(count)) == 0:
-            error_data["error_info"] = "账号为不能不填写"
+            error_data["error_info"] = "账号不能不填写"
             return render(request, "plat/alert.html", context=error_data)
         if len(str(password)) == 0:
             error_data["error_info"] = "密码不能不填写"
@@ -85,7 +88,12 @@ class Register(View):
             user.save()
             return render(request, 'plat/login.html')  # todo:密码已经修改，请查看提示
         else:
+            timestamp = int(time.time())
+            random_numbner = random.randint(0, 9999)
+            uid = timestamp*10 + random_numbner
+            print(f"生成的uid:{uid}")
             User.objects.create(
+                uid=str(uid),
                 count=count,
                 password=password
             )

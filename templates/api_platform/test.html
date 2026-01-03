@@ -5,28 +5,17 @@
     <title>api_main</title>
 </head>
 <body>
-    <input type="text" class="paixu" data-id='11' value="0" style="width: 40px;">
-
+    <div class="mb-3">
+        <label for="create_method" class="block text-sm font-medium text-gray-700">请求方式</label>
+        <select id="create_method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+        </select>
+    </div>
 </body>
 <script>
-    $(document).ready(function(){
-        $( ".paixu" ).blur( "click", function() {
-            var id = $( this ).data('id');
-            var paixu = $( this ).val();
-            $.ajax({
-                type:'post',
-                url:'?Action=paixu',
-                data:{id: id,paixu:paixu},
-                cache:false,
-                dataType:'json',
-                success:function(result){
-                    if(result['type']==1){
-                        alert(result['msg']);
-                    }
-                }
-            });
-        });
-    });
-    </script>
+
+</script>
     
 </html>
