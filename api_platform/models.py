@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 
 
 class Url(models.Model):
@@ -19,6 +18,20 @@ class Api(models.Model):
     desc = models.CharField(max_length=60, verbose_name="接口注释", null=True)
     publish = models.BooleanField(verbose_name="接口是否发布", null=True)
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "hoster_name": self.hoster_name,
+            "base_url": self.base_url,
+            "api_path": self.api_path,
+            "headers": self.headers,
+            "method": self.method,
+            "body": self.body,
+            "params": self.params,
+            "desc": self.desc,
+            "publish": self.publish
+        }
+
 
 class ApiUsing(models.Model):
     case_id = models.ForeignKey("Case", on_delete=models.CASCADE)
@@ -36,5 +49,5 @@ class Case(models.Model):
     name = models.CharField(max_length=60, verbose_name="用例名称")
     hoster_name = models.CharField(max_length=60, verbose_name="作者名称")
     publish = models.BooleanField(verbose_name="用例是否发布")
-    api_ids = ArrayField(models.IntegerField(), verbose_name="接口ID组合")
+    api_ids = models.JSONField(verbose_name="接口ID组合")
     annotation = models.CharField(max_length=60, verbose_name="用例注释")

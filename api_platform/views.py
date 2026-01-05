@@ -75,13 +75,35 @@ class SetApi(View):
             if hasattr(api_data, key):
                 setattr(api_data, key, value)
         api_data.save()
-        return JsonResponse({'message':"Update API successfully"}, status=200)
-
+        return JsonResponse({'message': "Update API successfully"}, status=200)
 
     def get(self, request):
         """获取接口"""
-        key = request.GET.get("key")
-        message = dict()
+        query_params = dict(request.GET)
+        print(f"查询参数是:{query_params}")
+        # 初始化查询集
+        apis = Api.objects.all()
+
+        # 处理查询参数
+        query = Q()
+        for key, value_list in query_params.items():
+            if key in [field.name for field in Api._meta.fields]:
+                for value in value_list:
+                    field_name = f"{key}__icontains"
+                    query |= Q(**{field_name: value})
+        apis = apis.filter(query)
+        if not apis:
+            return JsonResponse({'message': 'API not found'}, status=404)
+        # 将查询结果转换为字典列表
+        message = []
+        for api in apis:
+            print(api.to_dict())
+            message.append(api.to_dict())
+        data = {
+            "data": message
+        }
+        print(data)
+        return JsonResponse(data, status=200)
 
     def post(self, request):
         """创建接口"""
@@ -96,17 +118,20 @@ class SetApi(View):
             api_body = data.get("api_body")
             api_params = data.get("api_params")
             api_desc = data.get("api_desc")
+            # 检查数据库中是否存在相同的接口
+            if Api.objects.filter(api_path=api_path).exists() and Api.objects.filter(base_url=api_url).exists() and Api.objects.filter(method=api_method).exists() and Api.objects.filter(headers=api_header).exists() and Api.objects.filter(body=api_body).exists() and Api.objects.filter(params=api_params).exists():
+                return JsonResponse({'message': 'API already exists'}, status=400)
             api = Api(
                 name=api_name,
-                hoster_name = api_hoster,
-                base_url = api_url,
-                api_path = api_path,
-                method = api_method,
-                headers = api_header,
-                body = api_body,
-                params = api_params,
-                desc = api_desc,
-                publish = False  # 默认不发布
+                hoster_name=api_hoster,
+                base_url=api_url,
+                api_path=api_path,
+                method=api_method,
+                headers=api_header,
+                body=api_body,
+                params=api_params,
+                desc=api_desc,
+                publish=False  # 默认不发布
             )
             api.save()
             return JsonResponse({'message': 'Create API successfully'}, status=201)
