@@ -6,8 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from plat.models import User
 from plat.serializers import UserDetailSerialize
 from django.views.generic import View
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from functools import wraps
 
 
 def login_view(request):
@@ -17,32 +16,40 @@ def login_view(request):
 
 def login(request):
     """用户登录"""
-    count_list = []
     count_ = request.POST.get("count")
     password = request.POST.get("password")
-    count_list_query = User.objects.filter(count=count_)
-    count_list_serializer = UserDetailSerialize(count_list_query, many=True)
-    count_dict_query = count_list_serializer.data
-    for i in count_dict_query:
-        count_list.append(i["count"])
-    if count_ not in count_list:
-        error_data = dict()
-        error_data["error_info"] = "没有该账号，请先注册"
+    
+    try:
+        user = User.objects.get(count=count_)
+    except User.DoesNotExist:
+        error_data = {"error_info": "没有该账号，请先注册"}
         return render(request, "plat/alert.html", context=error_data)
+    
+    if password != user.password:
+        return HttpResponse("密码不正确")
     else:
-        user_password_ = User.objects.get(count=count_)
-        user_password = UserDetailSerialize(user_password_).data
-        # print(f"正确密码是{user_password['password']}")
-        if password != user_password['password']:
-            return HttpResponse("密码不正确")
-        else:
-            request.session["count"] = count_
-            request.session["user_password"] = user_password['password']
-            return redirect("main_view")
+        request.session["user_id"] = user.uid
+        request.session["user_count"] = user.count
+        request.session["logged_in"] = True  # 标记已登录
+        print("登录成功")
+        return redirect("main_view")
 
 
+def custom_login_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.session.get('logged_in'):
+            return redirect('login_view')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@custom_login_required
 def main_view(request):
     """登录后的平台主页"""
+    # 也可以检查所有 session 数据
+    # for key, value in request.session.items():
+    #     print(f"Session - {key}: {value}")
     return render(request, "plat/main.html")
 
 

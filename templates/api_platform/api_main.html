@@ -44,6 +44,7 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            console.log("页面加载时的 cookies:", document.cookie);
             // 创建接口扇形统计图
             const apiCtx = document.getElementById('api-chart').getContext('2d');
             const apiChart = new Chart(apiCtx, {

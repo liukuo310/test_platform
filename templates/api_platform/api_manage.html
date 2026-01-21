@@ -60,14 +60,15 @@
 </head>
 
 <body class="bg-gray-100 font-sans">
+    {% csrf_token %}
     <!-- 创建接口弹窗 -->
     <div id="myModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2 class="text-xl font-bold mb-4">创建接口</h2>
             <div class="mb-3">
-                <label for="create_name" class="block text-sm font-medium text-gray-700">接口名称</label>
-                <input type="text" id="create_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                <label for="api_name" class="block text-sm font-medium text-gray-700">接口名称</label>
+                <input type="text" id="api_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
             </div>
 
             <div class="mb-3">
@@ -161,10 +162,12 @@
 <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
 <script>
     $(document).ready(function () {
-        var baseUrl = "http://localhost:8000/api_platform/";
-        var createApiPath = "set_api/";
-        // var queryApiPath = "QueryApi/";
-
+        console.log("页面加载时的 cookies:", document.cookie);
+        var baseUrl = "http://127.0.0.1:8000/api_platform/";
+        var createApiPath = "create_api/";
+        var queryApiPath = "query_api/";
+        var deleteApiPath = "delete_api/";
+        var updateApiPath = "update_api/";
 
         // 显示创建接口弹窗
         $("#create_api").click(function () {
@@ -181,8 +184,7 @@
             var fullCreateApiUrl = baseUrl + createApiPath; // 拼接完整的接口地址
 
             var postData = {
-                api_hoster: $("#create_name").val(),
-                api_name: $("#create_name").val(),
+                api_name: $("#api_name").val(),
                 api_url: $("#create_url").val(),
                 api_path: $("#create_api_path").val(),
                 api_method: $("#create_method").val(),
@@ -192,16 +194,27 @@
                 api_desc: $("#create_annotation").val()
             };
 
-            $.ajax({
+            $.ajax({ 
                 url: fullCreateApiUrl,
                 type: "POST",
+                xhrFields: {
+                    withCredentials: true
+                },
+                crossDomain: true,
                 contentType: "application/json",  // 设置正确的 Content-Type 头
                 data: JSON.stringify(postData),  // 将数据转换为 JSON 字符串
+                beforeSend: function(xhr, settings) {
+                    console.log("请求发送前 - cookies:", document.cookie);
+                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                    if (csrfToken) {
+                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                    }
+                },
                 success: function () {
                     console.log("成功请求");
                     alert("创建接口成功");
-                    $("#myModal").css("display", "none"); 
-                    // 清空创建表单中的所有输入框
+                    $("#myModal").css("display", "none");
+                    // // 清空创建表单中的所有输入框
                     $("#create_name").val("");
                     $("#create_url").val("");
                     $("#create_api_path").val("");
@@ -209,23 +222,19 @@
                     $("#create_headers").val("");
                     $("#create_body").val("");
                     $("#create_annotation").val("");
-                                    
                 },
                 error: function (xhr, status, error) {
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        console.log("请求失败", xhr.responseJSON.message);
-                        alert("请求失败: " + xhr.responseJSON.message);
-                    } else {
-                        console.log("请求失败", error);
-                        alert("请求失败: " + error);
-                    }
+                    console.log("请求失败", xhr.responseText);
+                    alert("请求失败: " + (xhr.responseText || error));
                 }
             });
         });
 
         // 点击查询接口
         $("#query_api").click(function () {
-            var fullQueryApiUrl = baseUrl + createApiPath; // 拼接完整的接口地址
+            // 打印当前浏览器所有 cookies
+            console.log("当前浏览器所有 cookies:", document.cookie);
+            var fullQueryApiUrl = baseUrl + queryApiPath; // 拼接完整的接口地址
 
             var queryData = {
                 author: $("#query_author").val(),
@@ -240,9 +249,12 @@
 
             $.ajax({
                 url: fullQueryApiUrl,
-                type: "GET",
+                type: "POST",
                 contentType: "application/json",  // 设置正确的 Content-Type 头
                 data: JSON.stringify(queryData),  // 将数据转换为 JSON 字符串
+                xhrFields: {
+                    withCredentials: true  // 这会自动发送 cookies
+                },
                 success: function (data) {
                     // 清空结果列表
                     $("#results").empty();
@@ -267,6 +279,7 @@
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求头</th>");
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求体</th>");
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>注释</th>");
+                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>发布</th>");
                         thead.append(headerRow);
                         
                         // 表体
@@ -279,7 +292,10 @@
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.method || '') + "</td>");
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.headers || '') + "</td>");
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.body || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.annotation || '') + "</td>");
+                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.desc || '') + "</td>");
+                            var publishClass = item_data.publish ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                            var publishText = item_data.publish ? '已发布' : '未发布';
+                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'><span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " + publishClass + "'>" + publishText + "</span></td>");
                             tbody.append(row);
                         });
                         
