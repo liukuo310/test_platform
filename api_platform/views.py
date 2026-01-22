@@ -116,7 +116,7 @@ def put_api(request):
         if hasattr(api_data, key):
             setattr(api_data, key, value)
     api_data.save()
-    return JsonResponse({'message': "Update API successfully"}, status=200)
+    return JsonResponse({'message': "Update API successfully", "data": api_data.to_dict()}, status=200)
 
 
 @csrf_exempt
@@ -142,13 +142,15 @@ def get_api(request):
     if not apis:
         return JsonResponse({'message': 'API not found'}, status=404)
     # 将查询结果转换为字典列表
-    message = []
+    data_list = []
     for api in apis:
-        message.append(api.to_dict())
+        api_dict = api.to_dict()
+        api_dict['id'] = api.id  # 手动添加ID字段
+        data_list.append(api_dict)
     data = {
-        "data": message
+        "data": data_list
     }
-    # print(data)
+    print(data)
     return JsonResponse(data, status=200)
 
 

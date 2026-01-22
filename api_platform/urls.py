@@ -8,7 +8,7 @@ urlpatterns = [
     path('ci_di/', views.ci_di, name='ci_di'),
     # 接口操作
     path("create_api/", views.post_api, name="post_api"),
-    path("updateApiPath/", views.put_api, name="put_api"),
+    path("update_api/", views.put_api, name="put_api"),
     path("query_api/", views.get_api, name="get_api"),
     path("delete_api/", views.delete_api, name="delete_api"),
 

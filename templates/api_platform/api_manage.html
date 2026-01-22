@@ -161,13 +161,14 @@
 
 <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
 <script>
+var baseUrl = "http://127.0.0.1:8000/api_platform/";
+var createApiPath = "create_api/";
+var queryApiPath = "query_api/";
+var deleteApiPath = "delete_api/";
+var updateApiPath = "update_api/";
     $(document).ready(function () {
         console.log("页面加载时的 cookies:", document.cookie);
-        var baseUrl = "http://127.0.0.1:8000/api_platform/";
-        var createApiPath = "create_api/";
-        var queryApiPath = "query_api/";
-        var deleteApiPath = "delete_api/";
-        var updateApiPath = "update_api/";
+
 
         // 显示创建接口弹窗
         $("#create_api").click(function () {
@@ -271,6 +272,7 @@
                         
                         // 表头
                         var headerRow = $("<tr></tr>");
+                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>");
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口作者</th>");
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口名称</th>");
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口域名</th>");
@@ -285,6 +287,8 @@
                         // 表体
                         $.each(data_list, function (index, item_data) {
                             var row = $("<tr class='hover:bg-gray-50'></tr>");
+                            console.log("item_data:", item_data);
+                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.id || '') + "</td>");
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.hoster_name || '') + "</td>");
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>" + (item_data.name || '') + "</td>");
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.base_url || '') + "</td>");
@@ -293,9 +297,10 @@
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.headers || '') + "</td>");
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.body || '') + "</td>");
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.desc || '') + "</td>");
-                            var publishClass = item_data.publish ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-                            var publishText = item_data.publish ? '已发布' : '未发布';
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'><span class='px-2 inline-flex text-xs leading-5 font-semibold rounded-full " + publishClass + "'>" + publishText + "</span></td>");
+                            // 创建可点击的发布按钮
+                            console.log("item_data.id:", item_data.id);
+                            var publishButton = createPublishButton(item_data.id, item_data.publish);
+                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + publishButton + "</td>");
                             tbody.append(row);
                         });
                         
@@ -308,7 +313,73 @@
                 }
             });
         });
+
     });
+                // 创建发布按钮的函数
+        function createPublishButton(apiId, isPublished) {
+            var buttonClass = isPublished ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+            var buttonText = isPublished ? '已发布' : '未发布';
+            var buttonId = 'publish_btn_' + apiId;
+
+            return '<button id="' + buttonId + '" data-api-id="' + apiId + '" data-status="' + isPublished + '" class="publish-btn ' + buttonClass + ' text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">' + buttonText + '</button>';
+        }
+            // 添加发布按钮点击事件监听器
+        $(document).on('click', '.publish-btn', function() {
+            var button = $(this);
+            var apiId = button.data('api-id');
+            var currentStatus = button.data('status');
+            var newStatus = !currentStatus;  // 切换状态
+
+            // 防止重复点击
+            if (button.hasClass('updating')) {
+                return;
+            }
+
+            // 添加加载状态
+            button.addClass('updating opacity-75');
+            button.text('处理中...');
+
+            // 构建API URL（假设有一个切换发布状态的API）
+            var togglePublishUrl = baseUrl + updateApiPath;
+
+            // 发送请求切换发布状态
+            $.ajax({
+                url: togglePublishUrl,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    api_id: apiId,
+                    publish: newStatus
+                }),
+                xhrFields: {
+                    withCredentials: true
+                },
+                beforeSend: function(xhr, settings) {
+                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                    if (csrfToken) {
+                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                    }
+                },
+                success: function(response) {
+                    // 成功后更新按钮状态
+                    button.removeClass('bg-red-500 bg-green-500 updating opacity-75');
+                    button.addClass(newStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+                    button.text(newStatus ? '已发布' : '未发布');
+                    button.data('status', newStatus);
+                    alert('发布状态更新成功')
+                },
+                error: function(xhr, status, error) {
+                    // 失败时恢复原状态
+                    button.removeClass('updating opacity-75');
+                    button.text(currentStatus ? '已发布' : '未发布');
+                    button.removeClass('bg-red-500 bg-green-500');
+                    button.addClass(currentStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+
+                    console.error('发布状态更新失败:', error);
+                    alert('发布状态更新失败，请重试');
+                }
+            });
+});
 </script>
 
 </html>

@@ -7,6 +7,8 @@ class Url(models.Model):
 
 
 class Api(models.Model):
+    """接口表"""
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=60, verbose_name="接口名称", null=True)
     hoster_name = models.CharField(max_length=60, verbose_name="作者名称", null=True)
     base_url = models.CharField(max_length=60, verbose_name="接口域名", null=True)
