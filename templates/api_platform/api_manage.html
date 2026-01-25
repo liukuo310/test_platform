@@ -56,11 +56,47 @@
         .close:hover {
             color: #1f2937;
         }
+                /* 编辑弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .close-edit {
+            color: #9ca3af;
+            float: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-edit:hover {
+            color: #1f2937;
+        }
+
     </style>
 </head>
 
 <body class="bg-gray-100 font-sans">
-    {% csrf_token %}
     <!-- 创建接口弹窗 -->
     <div id="myModal" class="modal">
         <div class="modal-content">
@@ -157,6 +193,55 @@
             <ul id="results" class="list-disc list-inside"></ul>
         </div>
     </div>
+
+    <!-- 修改接口弹窗 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-edit">&times;</span>
+            <h2 class="text-xl font-bold mb-4">修改接口</h2>
+            <input type="hidden" id="edit_api_id">
+
+            <div class="mb-3">
+                <label for="edit_api_name" class="block text-sm font-medium text-gray-700">接口名称</label>
+                <input type="text" id="edit_api_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="edit_url" class="block text-sm font-medium text-gray-700">域名</label>
+                <input type="text" id="edit_url" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="edit_api_path" class="block text-sm font-medium text-gray-700">接口路径</label>
+                <input type="text" id="edit_api_path" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="edit_method" class="block text-sm font-medium text-gray-700">请求方式</label>
+                <select id="edit_method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="edit_headers" class="block text-sm font-medium text-gray-700">请求头</label>
+                <input type="text" id="edit_headers" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-3">
+                <label for="edit_body" class="block text-sm font-medium text-gray-700">请求体</label>
+                <input type="text" id="edit_body" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-4">
+                <label for="edit_annotation" class="block text-sm font-medium text-gray-700">注释</label>
+                <input type="text" id="edit_annotation" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <button id="confirm_edit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">确定</button>
+        </div>
+    </div>
+
+
 </body>
 
 <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
@@ -282,6 +367,8 @@ var updateApiPath = "update_api/";
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求体</th>");
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>注释</th>");
                         headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>发布</th>");
+                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>删除</th>");
+                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>修改</th>");
                         thead.append(headerRow);
                         
                         // 表体
@@ -301,6 +388,10 @@ var updateApiPath = "update_api/";
                             console.log("item_data.id:", item_data.id);
                             var publishButton = createPublishButton(item_data.id, item_data.publish);
                             row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + publishButton + "</td>");
+                            var deleteButton = createDeleteButton(item_data.id);
+                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + deleteButton + "</td>");
+                            var editButton = createEditButton(item_data.id);
+                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + editButton + "</td>");
                             tbody.append(row);
                         });
                         
@@ -315,7 +406,162 @@ var updateApiPath = "update_api/";
         });
 
     });
-                // 创建发布按钮的函数
+        function createEditButton(apiId) {
+            return '<button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">修改</button>';
+        }
+
+                // 添加编辑按钮点击事件监听器
+        $(document).on('click', '.edit-btn', function() {
+            var apiId = $(this).data('api-id');
+
+            // 查找当前行的数据并填充到编辑表单
+            var row = $(this).closest('tr');
+            $('#edit_api_id').val(apiId);
+            $('#edit_api_name').val(row.children().eq(2).text()); // 接口名称
+            $('#edit_url').val(row.children().eq(3).text());      // 域名
+            $('#edit_api_path').val(row.children().eq(4).text()); // 接口路径
+            $('#edit_method').val(row.children().eq(5).text());   // 请求方式
+            $('#edit_headers').val(row.children().eq(6).text());  // 请求头
+            $('#edit_body').val(row.children().eq(7).text());     // 请求体
+            $('#edit_annotation').val(row.children().eq(8).text()); // 注释
+
+            // 显示编辑弹窗
+            $('#editModal').show();
+        });
+
+        // 关闭编辑弹窗
+        $('.close-edit').click(function() {
+            $('#editModal').hide();
+        });
+
+        // 确定修改按钮点击事件
+        $('#confirm_edit').click(function() {
+            var editApiUrl = baseUrl + updateApiPath;
+            var apiId = $('#edit_api_id').val();
+
+            var editData = {
+                api_id: parseInt(apiId),
+                api_name: $('#edit_api_name').val(),
+                api_url: $('#edit_url').val(),
+                api_path: $('#edit_api_path').val(),
+                api_method: $('#edit_method').val(),
+                api_header: $('#edit_headers').val(),
+                api_body: $('#edit_body').val(),
+                api_desc: $('#edit_annotation').val()
+            };
+
+            $.ajax({
+                url: editApiUrl,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(editData),
+                xhrFields: {
+                    withCredentials: true
+                },
+                beforeSend: function(xhr, settings) {
+                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                    if (csrfToken) {
+                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                    }
+                },
+                success: function(response) {
+                    // 更新表格中的数据显示
+                    var row = $(`.edit-btn[data-api-id="${apiId}"]`).closest('tr');
+                    row.children().eq(2).text(editData.api_name); // 接口名称
+                    row.children().eq(3).text(editData.api_url);  // 域名
+                    row.children().eq(4).text(editData.api_path); // 接口路径
+                    row.children().eq(5).text(editData.api_method); // 请求方式
+                    row.children().eq(6).text(editData.api_header); // 请求头
+                    row.children().eq(7).text(editData.api_body);   // 请求体
+                    row.children().eq(8).text(editData.api_desc);   // 注释
+
+                    $('#editModal').hide();
+                    alert('接口修改成功');
+                },
+                error: function(xhr, status, error) {
+                    console.error('修改接口失败:', error);
+                    alert('修改接口失败: ' + (xhr.responseJSON?.message || '请重试'));
+                }
+            });
+        });
+
+        // 点击弹窗外区域关闭弹窗
+        $(window).click(function(event) {
+            if (event.target.id == 'editModal') {
+                $('#editModal').hide();
+            }
+        });
+
+
+
+        // 修改删除按钮创建函数
+        function createDeleteButton(apiId) {
+            return '<button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">删除</button>';
+        }
+
+                // 添加删除按钮点击事件监听器
+        $(document).on('click', '.delete-btn', function() {
+            var button = $(this);
+            var apiId = button.data('api-id');
+
+            // 确认删除操作
+            if (!confirm('确定要删除这个接口吗？此操作不可撤销。')) {
+                return;
+            }
+
+            // 防止重复点击
+            if (button.hasClass('deleting')) {
+                return;
+            }
+
+            // 添加加载状态
+            button.addClass('deleting opacity-75');
+            button.text('删除中...');
+
+            // 构建删除API URL
+            var deleteApiUrl = baseUrl + deleteApiPath;
+
+            // 发送删除请求
+            $.ajax({
+                url: deleteApiUrl,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    api_id: apiId
+                }),
+                xhrFields: {
+                    withCredentials: true
+                },
+                beforeSend: function(xhr, settings) {
+                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                    if (csrfToken) {
+                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                    }
+                },
+                success: function(response) {
+                    // 删除成功，移除对应的表格行
+                    button.closest('tr').fadeOut(300, function() {
+                        $(this).remove();
+
+                        // 检查是否还有数据行，如果没有则显示"无数据"提示
+                        var tableBody = $('#results table tbody');
+                        if (tableBody.find('tr').length === 0) {
+                            tableBody.append('<tr><td colspan="12" class="px-6 py-4 text-center text-sm text-gray-500">暂无数据</td></tr>');
+                        }
+                    });
+
+                    alert('接口删除成功');
+                },
+                error: function(xhr, status, error) {
+                    // 恢复按钮状态
+                    button.removeClass('deleting opacity-75');
+                    button.text('删除');
+
+                    console.error('删除接口失败:', error);
+                    alert('删除接口失败: ' + (xhr.responseJSON?.message || '请重试'));
+                }
+            });
+        });
         function createPublishButton(apiId, isPublished) {
             var buttonClass = isPublished ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
             var buttonText = isPublished ? '已发布' : '未发布';
