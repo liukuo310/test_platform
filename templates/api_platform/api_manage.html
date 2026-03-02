@@ -191,6 +191,56 @@
         <div id="result_list" class="mt-4 bg-white p-4 rounded-md shadow-md h-auto">
             <h2 class="text-lg font-bold mb-2">查询结果</h2>
             <ul id="results" class="list-disc list-inside"></ul>
+
+            <!-- 分页控件 -->
+            <div id="pagination_controls" class="mt-4 flex items-center justify-between bg-white p-4 rounded-md shadow-md hidden">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700">
+                        共 <span id="total_count" class="font-semibold">0</span> 条记录，
+                        第 <span id="current_page" class="font-semibold">1</span> 页，
+                        共 <span id="total_pages" class="font-semibold">1</span> 页
+                    </span>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <!-- 每页显示条数选择 -->
+                    <select id="page_size_select" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
+                        <option value="5">5条/页</option>
+                        <option value="10" selected>10条/页</option>
+                        <option value="20">20条/页</option>
+                        <option value="50">50条/页</option>
+                    </select>
+
+                    <!-- 分页按钮组 -->
+                    <div class="flex space-x-1">
+                        <button id="first_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            首页
+                        </button>
+                        <button id="prev_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            上一页
+                        </button>
+
+                        <!-- 页码显示区域 -->
+                        <div id="page_numbers" class="flex space-x-1"></div>
+
+                        <button id="next_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            下一页
+                        </button>
+                        <button id="last_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            末页
+                        </button>
+                    </div>
+
+                    <!-- 跳转到指定页 -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-700">跳转到</span>
+                        <input type="number" id="jump_page_input" min="1" class="w-16 border border-gray-300 rounded px-2 py-1 text-sm">
+                        <button id="jump_page_btn" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                            GO
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -251,380 +301,560 @@ var createApiPath = "create_api/";
 var queryApiPath = "query_api/";
 var deleteApiPath = "delete_api/";
 var updateApiPath = "update_api/";
-    $(document).ready(function () {
-        console.log("页面加载时的 cookies:", document.cookie);
+
+// 添加分页相关的全局变量
+var currentPage = 1;
+var pageSize = 10;
+var totalPage = 1;
+var totalCount = 0;
+
+$(document).ready(function () {
+    console.log("页面加载时的 cookies:", document.cookie);
 
 
-        // 显示创建接口弹窗
-        $("#create_api").click(function () {
-            $("#myModal").css("display", "block");
-        });
-
-        // 关闭弹窗
-        $(".close").click(function () {
-            $("#myModal").css("display", "none");
-        });
-
-        // 点击确定创建接口
-        $("#confirm_create").click(function () {
-            var fullCreateApiUrl = baseUrl + createApiPath; // 拼接完整的接口地址
-
-            var postData = {
-                api_name: $("#api_name").val(),
-                api_url: $("#create_url").val(),
-                api_path: $("#create_api_path").val(),
-                api_method: $("#create_method").val(),
-                api_header: $("#create_headers").val(),
-                api_body: $("#create_body").val(),
-                api_params: $("#create_api_params").val(),  // 假设你有一个用于参数的输入框
-                api_desc: $("#create_annotation").val()
-            };
-
-            $.ajax({ 
-                url: fullCreateApiUrl,
-                type: "POST",
-                xhrFields: {
-                    withCredentials: true
-                },
-                crossDomain: true,
-                contentType: "application/json",  // 设置正确的 Content-Type 头
-                data: JSON.stringify(postData),  // 将数据转换为 JSON 字符串
-                beforeSend: function(xhr, settings) {
-                    console.log("请求发送前 - cookies:", document.cookie);
-                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                    if (csrfToken) {
-                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                    }
-                },
-                success: function () {
-                    console.log("成功请求");
-                    alert("创建接口成功");
-                    $("#myModal").css("display", "none");
-                    // // 清空创建表单中的所有输入框
-                    $("#create_name").val("");
-                    $("#create_url").val("");
-                    $("#create_api_path").val("");
-                    $("#create_method").val("GET");
-                    $("#create_headers").val("");
-                    $("#create_body").val("");
-                    $("#create_annotation").val("");
-                },
-                error: function (xhr, status, error) {
-                    console.log("请求失败", xhr.responseText);
-                    alert("请求失败: " + (xhr.responseText || error));
-                }
-            });
-        });
-
-        // 点击查询接口
-        $("#query_api").click(function () {
-            // 打印当前浏览器所有 cookies
-            console.log("当前浏览器所有 cookies:", document.cookie);
-            var fullQueryApiUrl = baseUrl + queryApiPath; // 拼接完整的接口地址
-
-            var queryData = {
-                author: $("#query_author").val(),
-                name: $("#query_name").val(),
-                url: $("#query_url").val(),
-                api_url: $("#query_api_url").val(),
-                method: $("#query_method").val(),
-                headers: $("#query_headers").val(),
-                body: $("#query_body").val(),
-                annotation: $("#query_annotation").val()
-            };
-
-            $.ajax({
-                url: fullQueryApiUrl,
-                type: "POST",
-                contentType: "application/json",  // 设置正确的 Content-Type 头
-                data: JSON.stringify(queryData),  // 将数据转换为 JSON 字符串
-                xhrFields: {
-                    withCredentials: true  // 这会自动发送 cookies
-                },
-                success: function (data) {
-                    // 清空结果列表
-                    $("#results").empty();
-                    // 遍历返回的数据并添加到列表中
-                    if (data.length === 0) {
-                        $("#results").append("<p>没有找到匹配的接口</p>");
-                    } else {
-                        data_list = data.data;
-                        
-                        // 创建表格
-                        var table = $("<table class='min-w-full divide-y divide-gray-200'></table>");
-                        var thead = $("<thead class='bg-gray-50'></thead>");
-                        var tbody = $("<tbody class='bg-white divide-y divide-gray-200'></tbody>");
-                        
-                        // 表头
-                        var headerRow = $("<tr></tr>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口作者</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口名称</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口域名</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口地址</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求方式</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求头</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求体</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>注释</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>发布</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>删除</th>");
-                        headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>修改</th>");
-                        thead.append(headerRow);
-                        
-                        // 表体
-                        $.each(data_list, function (index, item_data) {
-                            var row = $("<tr class='hover:bg-gray-50'></tr>");
-                            console.log("item_data:", item_data);
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.id || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.hoster_name || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>" + (item_data.name || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.base_url || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.api_path || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.method || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.headers || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.body || '') + "</td>");
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.desc || '') + "</td>");
-                            // 创建可点击的发布按钮
-                            console.log("item_data.id:", item_data.id);
-                            var publishButton = createPublishButton(item_data.id, item_data.publish);
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + publishButton + "</td>");
-                            var deleteButton = createDeleteButton(item_data.id);
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + deleteButton + "</td>");
-                            var editButton = createEditButton(item_data.id);
-                            row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + editButton + "</td>");
-                            tbody.append(row);
-                        });
-                        
-                        table.append(thead, tbody);
-                        $("#results").append(table);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.log("请求失败", error);
-                }
-            });
-        });
-
+    // 显示创建接口弹窗
+    $("#create_api").click(function () {
+        $("#myModal").css("display", "block");
     });
-        function createEditButton(apiId) {
-            return '<button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">修改</button>';
-        }
 
-                // 添加编辑按钮点击事件监听器
-        $(document).on('click', '.edit-btn', function() {
-            var apiId = $(this).data('api-id');
+    // 关闭弹窗
+    $(".close").click(function () {
+        $("#myModal").css("display", "none");
+    });
 
-            // 查找当前行的数据并填充到编辑表单
-            var row = $(this).closest('tr');
-            $('#edit_api_id').val(apiId);
-            $('#edit_api_name').val(row.children().eq(2).text()); // 接口名称
-            $('#edit_url').val(row.children().eq(3).text());      // 域名
-            $('#edit_api_path').val(row.children().eq(4).text()); // 接口路径
-            $('#edit_method').val(row.children().eq(5).text());   // 请求方式
-            $('#edit_headers').val(row.children().eq(6).text());  // 请求头
-            $('#edit_body').val(row.children().eq(7).text());     // 请求体
-            $('#edit_annotation').val(row.children().eq(8).text()); // 注释
+    // 点击确定创建接口
+    $("#confirm_create").click(function () {
+        var fullCreateApiUrl = baseUrl + createApiPath; // 拼接完整的接口地址
 
-            // 显示编辑弹窗
-            $('#editModal').show();
-        });
+        var postData = {
+            api_name: $("#api_name").val(),
+            api_url: $("#create_url").val(),
+            api_path: $("#create_api_path").val(),
+            api_method: $("#create_method").val(),
+            api_header: $("#create_headers").val(),
+            api_body: $("#create_body").val(),
+            api_params: $("#create_api_params").val(),  // 假设你有一个用于参数的输入框
+            api_desc: $("#create_annotation").val()
+        };
 
-        // 关闭编辑弹窗
-        $('.close-edit').click(function() {
-            $('#editModal').hide();
-        });
-
-        // 确定修改按钮点击事件
-        $('#confirm_edit').click(function() {
-            var editApiUrl = baseUrl + updateApiPath;
-            var apiId = $('#edit_api_id').val();
-
-            var editData = {
-                api_id: parseInt(apiId),
-                api_name: $('#edit_api_name').val(),
-                api_url: $('#edit_url').val(),
-                api_path: $('#edit_api_path').val(),
-                api_method: $('#edit_method').val(),
-                api_header: $('#edit_headers').val(),
-                api_body: $('#edit_body').val(),
-                api_desc: $('#edit_annotation').val()
-            };
-
-            $.ajax({
-                url: editApiUrl,
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify(editData),
-                xhrFields: {
-                    withCredentials: true
-                },
-                beforeSend: function(xhr, settings) {
-                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                    if (csrfToken) {
-                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                    }
-                },
-                success: function(response) {
-                    // 更新表格中的数据显示
-                    var row = $(`.edit-btn[data-api-id="${apiId}"]`).closest('tr');
-                    row.children().eq(2).text(editData.api_name); // 接口名称
-                    row.children().eq(3).text(editData.api_url);  // 域名
-                    row.children().eq(4).text(editData.api_path); // 接口路径
-                    row.children().eq(5).text(editData.api_method); // 请求方式
-                    row.children().eq(6).text(editData.api_header); // 请求头
-                    row.children().eq(7).text(editData.api_body);   // 请求体
-                    row.children().eq(8).text(editData.api_desc);   // 注释
-
-                    $('#editModal').hide();
-                    alert('接口修改成功');
-                },
-                error: function(xhr, status, error) {
-                    console.error('修改接口失败:', error);
-                    alert('修改接口失败: ' + (xhr.responseJSON?.message || '请重试'));
+        $.ajax({
+            url: fullCreateApiUrl,
+            type: "POST",
+            xhrFields: {
+                withCredentials: true
+            },
+            crossDomain: true,
+            contentType: "application/json",  // 设置正确的 Content-Type 头
+            data: JSON.stringify(postData),  // 将数据转换为 JSON 字符串
+            beforeSend: function(xhr, settings) {
+                console.log("请求发送前 - cookies:", document.cookie);
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
                 }
-            });
+            },
+            success: function () {
+                console.log("成功请求");
+                alert("创建接口成功");
+                $("#myModal").css("display", "none");
+                // // 清空创建表单中的所有输入框
+                $("#create_name").val("");
+                $("#create_url").val("");
+                $("#create_api_path").val("");
+                $("#create_method").val("GET");
+                $("#create_headers").val("");
+                $("#create_body").val("");
+                $("#create_annotation").val("");
+            },
+            error: function (xhr, status, error) {
+                console.log("请求失败", xhr.responseText);
+                alert("请求失败: " + (xhr.responseText || error));
+            }
         });
+    });
 
-        // 点击弹窗外区域关闭弹窗
-        $(window).click(function(event) {
-            if (event.target.id == 'editModal') {
+    // 点击查询接口 - 支持分页
+    $("#query_api").click(function () {
+        currentPage = 1; // 重置到第一页
+        performQuery();
+    });
+
+    // 每页显示条数改变事件
+    $("#page_size_select").change(function() {
+        pageSize = parseInt($(this).val());
+        currentPage = 1;
+        performQuery();
+    });
+
+    // 首页按钮
+    $("#first_page").click(function() {
+        if (currentPage > 1) {
+            currentPage = 1;
+            performQuery();
+        }
+    });
+
+    // 上一页按钮
+    $("#prev_page").click(function() {
+        if (currentPage > 1) {
+            currentPage--;
+            performQuery();
+        }
+    });
+
+    // 下一页按钮
+    $("#next_page").click(function() {
+        if (currentPage < totalPage) {
+            currentPage++;
+            performQuery();
+        }
+    });
+
+    // 末页按钮
+    $("#last_page").click(function() {
+        if (currentPage < totalPage) {
+            currentPage = totalPage;
+            performQuery();
+        }
+    });
+
+    // 跳转到指定页
+    $("#jump_page_btn").click(function() {
+        var jumpPage = parseInt($("#jump_page_input").val());
+        if (jumpPage >= 1 && jumpPage <= totalPage && jumpPage !== currentPage) {
+            currentPage = jumpPage;
+            performQuery();
+        }
+    });
+
+    // 回车键跳转
+    $("#jump_page_input").keypress(function(e) {
+        if (e.which === 13) { // Enter键
+            $("#jump_page_btn").click();
+        }
+    });
+
+});
+
+// 执行查询的核心函数
+function performQuery() {
+    console.log("当前浏览器所有 cookies:", document.cookie);
+    var fullQueryApiUrl = baseUrl + queryApiPath;
+
+    var queryData = {
+        author: $("#query_author").val(),
+        name: $("#query_name").val(),
+        url: $("#query_url").val(),
+        api_url: $("#query_api_url").val(),
+        method: $("#query_method").val(),
+        headers: $("#query_headers").val(),
+        body: $("#query_body").val(),
+        annotation: $("#query_annotation").val(),
+        // 添加分页参数
+        page: currentPage,
+        page_size: pageSize
+    };
+
+    $.ajax({
+        url: fullQueryApiUrl,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(queryData),
+        xhrFields: {
+            withCredentials: true
+        },
+        success: function (response) {
+            // 清空结果列表
+            $("#results").empty();
+
+            // 处理分页数据
+            var data = response.data || [];
+            var pagination = response.pagination || {};
+
+            // 更新分页信息
+            totalCount = pagination.total_count || 0;
+            totalPage = pagination.total_pages || 1;
+            currentPage = pagination.current_page || 1;
+
+            // 更新分页控件显示
+            updatePaginationControls(pagination);
+
+            if (data.length === 0) {
+                $("#results").append("<p class='text-center py-4 text-gray-500'>没有找到匹配的接口</p>");
+                $("#pagination_controls").addClass("hidden");
+            } else {
+                // 显示分页控件
+                $("#pagination_controls").removeClass("hidden");
+
+                // 创建表格
+                var table = $("<table class='min-w-full divide-y divide-gray-200'></table>");
+                var thead = $("<thead class='bg-gray-50'></thead>");
+                var tbody = $("<tbody class='bg-white divide-y divide-gray-200'></tbody>");
+
+                // 表头
+                var headerRow = $("<tr></tr>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口作者</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口名称</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口域名</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>接口地址</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求方式</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求头</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>请求体</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>注释</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>发布</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>删除</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>修改</th>");
+                thead.append(headerRow);
+
+                // 表体
+                $.each(data, function (index, item_data) {
+                    var row = $("<tr class='hover:bg-gray-50'></tr>");
+                    console.log("item_data:", item_data);
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.id || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.hoster_name || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>" + (item_data.name || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.base_url || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.api_path || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.method || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.headers || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.body || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item_data.desc || '') + "</td>");
+                    // 创建可点击的发布按钮
+                    console.log("item_data.id:", item_data.id);
+                    var publishButton = createPublishButton(item_data.id, item_data.publish);
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + publishButton + "</td>");
+                    var deleteButton = createDeleteButton(item_data.id);
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + deleteButton + "</td>");
+                    var editButton = createEditButton(item_data.id);
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + editButton + "</td>");
+                    tbody.append(row);
+                });
+
+                table.append(thead, tbody);
+                $("#results").append(table);
+            }
+        },
+        error: function (xhr, status, error) {
+            console.log("请求失败", error);
+            alert("查询失败: " + (xhr.responseJSON?.message || error));
+        }
+    });
+}
+
+// 更新分页控件
+function updatePaginationControls(pagination) {
+    // 更新统计信息
+    $("#total_count").text(pagination.total_count || 0);
+    $("#current_page").text(pagination.current_page || 1);
+    $("#total_pages").text(pagination.total_pages || 1);
+
+    // 更新按钮状态
+    var hasPrevious = pagination.has_previous || false;
+    var hasNext = pagination.has_next || false;
+
+    $("#first_page").prop("disabled", !hasPrevious);
+    $("#prev_page").prop("disabled", !hasPrevious);
+    $("#next_page").prop("disabled", !hasNext);
+    $("#last_page").prop("disabled", !hasNext);
+
+    // 更新页码显示
+    updatePageNumbers(pagination.current_page, pagination.total_pages);
+
+    // 更新跳转输入框的最大值
+    $("#jump_page_input").attr("max", pagination.total_pages);
+}
+
+// 更新页码显示
+function updatePageNumbers(currentPage, totalPages) {
+    var pageNumbersContainer = $("#page_numbers");
+    pageNumbersContainer.empty();
+
+    if (totalPages <= 7) {
+        // 如果总页数较少，显示所有页码
+        for (var i = 1; i <= totalPages; i++) {
+            var button = createPageButton(i, i === currentPage);
+            pageNumbersContainer.append(button);
+        }
+    } else {
+        // 如果总页数较多，显示省略号效果
+        if (currentPage <= 4) {
+            // 当前页在前面
+            for (var i = 1; i <= 5; i++) {
+                var button = createPageButton(i, i === currentPage);
+                pageNumbersContainer.append(button);
+            }
+            pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            var lastButton = createPageButton(totalPages, false);
+            pageNumbersContainer.append(lastButton);
+        } else if (currentPage >= totalPages - 3) {
+            // 当前页在后面
+            var firstButton = createPageButton(1, false);
+            pageNumbersContainer.append(firstButton);
+            pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            for (var i = totalPages - 4; i <= totalPages; i++) {
+                var button = createPageButton(i, i === currentPage);
+                pageNumbersContainer.append(button);
+            }
+        } else {
+            // 当前页在中间
+            var firstButton = createPageButton(1, false);
+            pageNumbersContainer.append(firstButton);
+            pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            for (var i = currentPage - 1; i <= currentPage + 1; i++) {
+                var button = createPageButton(i, i === currentPage);
+                pageNumbersContainer.append(button);
+            }
+            pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            var lastButton = createPageButton(totalPages, false);
+            pageNumbersContainer.append(lastButton);
+        }
+    }
+}
+
+// 创建页码按钮
+function createPageButton(pageNum, isActive) {
+    var classes = "px-3 py-1 border rounded text-sm ";
+    if (isActive) {
+        classes += "bg-blue-500 text-white border-blue-500";
+    } else {
+        classes += "border-gray-300 hover:bg-gray-100";
+    }
+
+    var button = $("<button>", {
+        class: classes,
+        text: pageNum,
+        click: function() {
+            if (!isActive) {
+                currentPage = pageNum;
+                performQuery();
+            }
+        }
+    });
+
+    return button;
+}
+
+
+    function createEditButton(apiId) {
+        return '<button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">修改</button>';
+    }
+
+            // 添加编辑按钮点击事件监听器
+    $(document).on('click', '.edit-btn', function() {
+        var apiId = $(this).data('api-id');
+
+        // 查找当前行的数据并填充到编辑表单
+        var row = $(this).closest('tr');
+        $('#edit_api_id').val(apiId);
+        $('#edit_api_name').val(row.children().eq(2).text()); // 接口名称
+        $('#edit_url').val(row.children().eq(3).text());      // 域名
+        $('#edit_api_path').val(row.children().eq(4).text()); // 接口路径
+        $('#edit_method').val(row.children().eq(5).text());   // 请求方式
+        $('#edit_headers').val(row.children().eq(6).text());  // 请求头
+        $('#edit_body').val(row.children().eq(7).text());     // 请求体
+        $('#edit_annotation').val(row.children().eq(8).text()); // 注释
+
+        // 显示编辑弹窗
+        $('#editModal').show();
+    });
+
+    // 关闭编辑弹窗
+    $('.close-edit').click(function() {
+        $('#editModal').hide();
+    });
+
+    // 确定修改按钮点击事件
+    $('#confirm_edit').click(function() {
+        var editApiUrl = baseUrl + updateApiPath;
+        var apiId = $('#edit_api_id').val();
+
+        var editData = {
+            api_id: parseInt(apiId),
+            api_name: $('#edit_api_name').val(),
+            api_url: $('#edit_url').val(),
+            api_path: $('#edit_api_path').val(),
+            api_method: $('#edit_method').val(),
+            api_header: $('#edit_headers').val(),
+            api_body: $('#edit_body').val(),
+            api_desc: $('#edit_annotation').val()
+        };
+
+        $.ajax({
+            url: editApiUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(editData),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                // 更新表格中的数据显示
+                var row = $(`.edit-btn[data-api-id="${apiId}"]`).closest('tr');
+                row.children().eq(2).text(editData.api_name); // 接口名称
+                row.children().eq(3).text(editData.api_url);  // 域名
+                row.children().eq(4).text(editData.api_path); // 接口路径
+                row.children().eq(5).text(editData.api_method); // 请求方式
+                row.children().eq(6).text(editData.api_header); // 请求头
+                row.children().eq(7).text(editData.api_body);   // 请求体
+                row.children().eq(8).text(editData.api_desc);   // 注释
+
                 $('#editModal').hide();
+                alert('接口修改成功');
+            },
+            error: function(xhr, status, error) {
+                console.error('修改接口失败:', error);
+                alert('修改接口失败: ' + (xhr.responseJSON?.message || '请重试'));
             }
         });
+    });
+
+    // 点击弹窗外区域关闭弹窗
+    $(window).click(function(event) {
+        if (event.target.id == 'editModal') {
+            $('#editModal').hide();
+        }
+    });
 
 
 
-        // 修改删除按钮创建函数
-        function createDeleteButton(apiId) {
-            return '<button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">删除</button>';
+    // 修改删除按钮创建函数
+    function createDeleteButton(apiId) {
+        return '<button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">删除</button>';
+    }
+
+            // 添加删除按钮点击事件监听器
+    $(document).on('click', '.delete-btn', function() {
+        var button = $(this);
+        var apiId = button.data('api-id');
+
+        // 确认删除操作
+        if (!confirm('确定要删除这个接口吗？此操作不可撤销。')) {
+            return;
         }
 
-                // 添加删除按钮点击事件监听器
-        $(document).on('click', '.delete-btn', function() {
-            var button = $(this);
-            var apiId = button.data('api-id');
+        // 防止重复点击
+        if (button.hasClass('deleting')) {
+            return;
+        }
 
-            // 确认删除操作
-            if (!confirm('确定要删除这个接口吗？此操作不可撤销。')) {
-                return;
-            }
+        // 添加加载状态
+        button.addClass('deleting opacity-75');
+        button.text('删除中...');
 
-            // 防止重复点击
-            if (button.hasClass('deleting')) {
-                return;
-            }
+        // 构建删除API URL
+        var deleteApiUrl = baseUrl + deleteApiPath;
 
-            // 添加加载状态
-            button.addClass('deleting opacity-75');
-            button.text('删除中...');
-
-            // 构建删除API URL
-            var deleteApiUrl = baseUrl + deleteApiPath;
-
-            // 发送删除请求
-            $.ajax({
-                url: deleteApiUrl,
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    api_id: apiId
-                }),
-                xhrFields: {
-                    withCredentials: true
-                },
-                beforeSend: function(xhr, settings) {
-                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                    if (csrfToken) {
-                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                    }
-                },
-                success: function(response) {
-                    // 删除成功，移除对应的表格行
-                    button.closest('tr').fadeOut(300, function() {
-                        $(this).remove();
-
-                        // 检查是否还有数据行，如果没有则显示"无数据"提示
-                        var tableBody = $('#results table tbody');
-                        if (tableBody.find('tr').length === 0) {
-                            tableBody.append('<tr><td colspan="12" class="px-6 py-4 text-center text-sm text-gray-500">暂无数据</td></tr>');
-                        }
-                    });
-
-                    alert('接口删除成功');
-                },
-                error: function(xhr, status, error) {
-                    // 恢复按钮状态
-                    button.removeClass('deleting opacity-75');
-                    button.text('删除');
-
-                    console.error('删除接口失败:', error);
-                    alert('删除接口失败: ' + (xhr.responseJSON?.message || '请重试'));
+        // 发送删除请求
+        $.ajax({
+            url: deleteApiUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                api_id: apiId
+            }),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
                 }
-            });
+            },
+            success: function(response) {
+                // 删除成功，移除对应的表格行
+                button.closest('tr').fadeOut(300, function() {
+                    $(this).remove();
+
+                    // 检查是否还有数据行，如果没有则显示"无数据"提示
+                    var tableBody = $('#results table tbody');
+                    if (tableBody.find('tr').length === 0) {
+                        tableBody.append('<tr><td colspan="12" class="px-6 py-4 text-center text-sm text-gray-500">暂无数据</td></tr>');
+                    }
+                });
+
+                alert('接口删除成功');
+            },
+            error: function(xhr, status, error) {
+                // 恢复按钮状态
+                button.removeClass('deleting opacity-75');
+                button.text('删除');
+
+                console.error('删除接口失败:', error);
+                alert('删除接口失败: ' + (xhr.responseJSON?.message || '请重试'));
+            }
         });
-        function createPublishButton(apiId, isPublished) {
-            var buttonClass = isPublished ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
-            var buttonText = isPublished ? '已发布' : '未发布';
-            var buttonId = 'publish_btn_' + apiId;
+    });
+    function createPublishButton(apiId, isPublished) {
+        var buttonClass = isPublished ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+        var buttonText = isPublished ? '已发布' : '未发布';
+        var buttonId = 'publish_btn_' + apiId;
 
-            return '<button id="' + buttonId + '" data-api-id="' + apiId + '" data-status="' + isPublished + '" class="publish-btn ' + buttonClass + ' text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">' + buttonText + '</button>';
+        return '<button id="' + buttonId + '" data-api-id="' + apiId + '" data-status="' + isPublished + '" class="publish-btn ' + buttonClass + ' text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">' + buttonText + '</button>';
+    }
+        // 添加发布按钮点击事件监听器
+    $(document).on('click', '.publish-btn', function() {
+        var button = $(this);
+        var apiId = button.data('api-id');
+        var currentStatus = button.data('status');
+        var newStatus = !currentStatus;  // 切换状态
+
+        // 防止重复点击
+        if (button.hasClass('updating')) {
+            return;
         }
-            // 添加发布按钮点击事件监听器
-        $(document).on('click', '.publish-btn', function() {
-            var button = $(this);
-            var apiId = button.data('api-id');
-            var currentStatus = button.data('status');
-            var newStatus = !currentStatus;  // 切换状态
 
-            // 防止重复点击
-            if (button.hasClass('updating')) {
-                return;
-            }
+        // 添加加载状态
+        button.addClass('updating opacity-75');
+        button.text('处理中...');
 
-            // 添加加载状态
-            button.addClass('updating opacity-75');
-            button.text('处理中...');
+        // 构建API URL（假设有一个切换发布状态的API）
+        var togglePublishUrl = baseUrl + updateApiPath;
 
-            // 构建API URL（假设有一个切换发布状态的API）
-            var togglePublishUrl = baseUrl + updateApiPath;
-
-            // 发送请求切换发布状态
-            $.ajax({
-                url: togglePublishUrl,
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                    api_id: apiId,
-                    publish: newStatus
-                }),
-                xhrFields: {
-                    withCredentials: true
-                },
-                beforeSend: function(xhr, settings) {
-                    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                    if (csrfToken) {
-                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                    }
-                },
-                success: function(response) {
-                    // 成功后更新按钮状态
-                    button.removeClass('bg-red-500 bg-green-500 updating opacity-75');
-                    button.addClass(newStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
-                    button.text(newStatus ? '已发布' : '未发布');
-                    button.data('status', newStatus);
-                    alert('发布状态更新成功')
-                },
-                error: function(xhr, status, error) {
-                    // 失败时恢复原状态
-                    button.removeClass('updating opacity-75');
-                    button.text(currentStatus ? '已发布' : '未发布');
-                    button.removeClass('bg-red-500 bg-green-500');
-                    button.addClass(currentStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
-
-                    console.error('发布状态更新失败:', error);
-                    alert('发布状态更新失败，请重试');
+        // 发送请求切换发布状态
+        $.ajax({
+            url: togglePublishUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                api_id: apiId,
+                publish: newStatus
+            }),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
                 }
-            });
+            },
+            success: function(response) {
+                // 成功后更新按钮状态
+                button.removeClass('bg-red-500 bg-green-500 updating opacity-75');
+                button.addClass(newStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+                button.text(newStatus ? '已发布' : '未发布');
+                button.data('status', newStatus);
+                alert('发布状态更新成功')
+            },
+            error: function(xhr, status, error) {
+                // 失败时恢复原状态
+                button.removeClass('updating opacity-75');
+                button.text(currentStatus ? '已发布' : '未发布');
+                button.removeClass('bg-red-500 bg-green-500');
+                button.addClass(currentStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+
+                console.error('发布状态更新失败:', error);
+                alert('发布状态更新失败，请重试');
+            }
+        });
 });
 </script>
 

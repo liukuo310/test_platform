@@ -8,6 +8,7 @@ from django.db.models import Count, Q
 from api_platform.models import Api, Case
 from plat.models import User
 from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 def api_main_view(request):
@@ -129,26 +130,55 @@ def get_api(request):
         return JsonResponse({'message': 'Invalid JSON format'}, status=400)
     acount = request.session.get("count")
     print(f"cookies的值：{acount}")
+
+    page = int(query_params.get("page", 1))  # 不传参数情况默认为1
+    page_size = int(query_params.get("page_size", 10))
+
     # 初始化查询集
     apis = Api.objects.all()
     # 处理查询参数
     query = Q()
     for key, value_list in query_params.items():
+        if key == "page" or key == "page_size":
+            continue
         if key in [field.name for field in Api._meta.fields]:
             for value in value_list:
                 field_name = f"{key}__icontains"
                 query |= Q(**{field_name: value})
     apis = apis.filter(query)
+
     if not apis:
         return JsonResponse({'message': 'API not found'}, status=404)
+
+    paginator = Paginator(apis, page_size)
+
+    try:
+        paginated_apis = paginator.page(page)
+    except PageNotAnInteger:
+        paginated_apis = paginator.page(1)
+    except EmptyPage:
+        paginated_apis = paginator.page(paginator.num_pages)
+        page = paginator.num_pages
+
     # 将查询结果转换为字典列表
     data_list = []
-    for api in apis:
+    for api in paginated_apis:
         api_dict = api.to_dict()
         api_dict['id'] = api.id  # 手动添加ID字段
         data_list.append(api_dict)
+    # 返回分页数据
     data = {
-        "data": data_list
+        "data": data_list,
+        "pagination": {
+            "current_page": page,
+            "page_size": page_size,
+            "total_count": paginator.count,
+            "total_pages": paginator.num_pages,
+            "has_next": paginated_apis.has_next(),
+            "has_previous": paginated_apis.has_previous(),
+            "next_page": paginated_apis.next_page_number() if paginated_apis.has_next() else None,
+            "previous_page": paginated_apis.previous_page_number() if paginated_apis.has_previous() else None
+        }
     }
     print(data)
     return JsonResponse(data, status=200)
