@@ -1,10 +1,989 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>case_manage_view</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用例管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .close {
+            color: #9ca3af;
+            float: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #1f2937;
+        }
+
+        .modal-lg {
+            max-width: 1000px;
+        }
+    </style>
 </head>
-<body>
-    <p>用例管理界面</p>
+
+<body class="bg-gray-100 font-sans">
+    <!-- 创建用例弹窗 -->
+    <div id="createCaseModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 class="text-xl font-bold mb-4">创建用例</h2>
+            <div class="mb-3">
+                <label for="create_case_name" class="block text-sm font-medium text-gray-700">用例名称</label>
+                <input type="text" id="create_case_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-4">
+                <label for="create_case_annotation" class="block text-sm font-medium text-gray-700">用例注释</label>
+                <input type="text" id="create_case_annotation" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">添加 API</label>
+                <button id="add_api_in_create" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center gap-2">
+                    <i class="fas fa-plus"></i> 添加 API
+                </button>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">已添加的 API 列表</label>
+                <div class="overflow-x-auto max-h-48 overflow-y-auto border border-gray-200 rounded-md">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API ID</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">方法</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">参数</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="create_case_api_list" class="bg-white divide-y divide-gray-200">
+                            <tr><td colspan="4" class="px-3 py-2 text-center text-sm text-gray-500">暂无 API</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button id="confirm_create_case" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">确定</button>
+        </div>
+    </div>
+
+    <!-- 选择 API 列表弹窗 -->
+    <div id="selectApiListModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-api-list">&times;</span>
+            <h2 class="text-xl font-bold mb-4">选择 API</h2>
+            <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">路径</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">方法</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="api_list_select_body" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改用例弹窗 -->
+    <div id="editCaseModal" class="modal">
+        <div class="modal-content">
+            <span class="close-edit">&times;</span>
+            <h2 class="text-xl font-bold mb-4">修改用例</h2>
+            <input type="hidden" id="edit_case_id">
+            <div class="mb-3">
+                <label for="edit_case_name" class="block text-sm font-medium text-gray-700">用例名称</label>
+                <input type="text" id="edit_case_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-4">
+                <label for="edit_case_annotation" class="block text-sm font-medium text-gray-700">用例注释</label>
+                <input type="text" id="edit_case_annotation" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <button id="confirm_edit_case" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">确定</button>
+        </div>
+    </div>
+
+    <!-- 用例详情弹窗（包含 API 列表） -->
+    <div id="caseDetailModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-detail">&times;</span>
+            <h2 class="text-xl font-bold mb-4">用例详情</h2>
+            <div class="mb-4 bg-gray-50 p-4 rounded-md">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-600">用例名称</p>
+                        <p class="font-semibold" id="detail_case_name"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">用例作者</p>
+                        <p class="font-semibold" id="detail_case_hoster"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">发布状态</p>
+                        <p id="detail_case_publish"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">API 数量</p>
+                        <p class="font-semibold" id="detail_api_count"></p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-sm text-gray-600">用例注释</p>
+                        <p class="text-gray-700" id="detail_case_annotation"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <button id="add_api_to_case" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">添加 API</button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">请求方式</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">请求参数</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">请求头</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">请求体</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">预期结果</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">全局变量</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="api_list_body" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑 API 到用例的弹窗 -->
+    <div id="apiToCaseModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-api">&times;</span>
+            <h2 class="text-xl font-bold mb-4" id="api_modal_title">添加 API 到用例</h2>
+            <input type="hidden" id="api_using_id">
+            <input type="hidden" id="current_case_id">
+
+            <div class="mb-3">
+                <label for="select_api_id" class="block text-sm font-medium text-gray-700">选择 API</label>
+                <select id="select_api_id" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="api_method" class="block text-sm font-medium text-gray-700">请求方式</label>
+                    <select id="api_method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="api_params" class="block text-sm font-medium text-gray-700">请求参数</label>
+                    <input type="text" id="api_params" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+
+            <div class="mb-3 mt-3">
+                <label for="api_headers" class="block text-sm font-medium text-gray-700">请求头</label>
+                <input type="text" id="api_headers" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="api_body" class="block text-sm font-medium text-gray-700">请求体</label>
+                <input type="text" id="api_body" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="api_assert_result" class="block text-sm font-medium text-gray-700">预期结果</label>
+                <input type="text" id="api_assert_result" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-4">
+                <label for="api_globla_values" class="block text-sm font-medium text-gray-700">全局变量</label>
+                <input type="text" id="api_globla_values" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <button id="confirm_add_api" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">确定</button>
+        </div>
+    </div>
+
+    <!-- API 详情弹窗（用于创建用例时添加 API） -->
+    <div id="apiDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close-api-detail">&times;</span>
+            <h2 class="text-xl font-bold mb-4">API 详细信息</h2>
+            <input type="hidden" id="detail_api_id">
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">API 名称</label>
+                    <input type="text" id="detail_api_name" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-100" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">API 路径</label>
+                    <input type="text" id="detail_api_path" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-100" readonly>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label for="detail_api_method" class="block text-sm font-medium text-gray-700">请求方式</label>
+                    <select id="detail_api_method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="detail_api_params" class="block text-sm font-medium text-gray-700">请求参数</label>
+                    <input type="text" id="detail_api_params" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+
+            <div class="mb-3 mt-3">
+                <label for="detail_api_headers" class="block text-sm font-medium text-gray-700">请求头</label>
+                <input type="text" id="detail_api_headers" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label for="detail_api_body" class="block text-sm font-medium text-gray-700">请求体</label>
+                <textarea id="detail_api_body" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="detail_api_assert_result" class="block text-sm font-medium text-gray-700">预期结果</label>
+                <input type="text" id="detail_api_assert_result" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <div class="mb-4">
+                <label for="detail_api_globla_values" class="block text-sm font-medium text-gray-700">全局变量</label>
+                <input type="text" id="detail_api_globla_values" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <button id="confirm_save_api_detail" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">保存并添加到用例</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto py-4 px-4">
+        <button id="create_case_btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mb-2">创建用例</button>
+
+        <div class="bg-white p-4 rounded-md shadow-md mb-4">
+            <h2 class="text-lg font-bold mb-2">查询用例</h2>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label for="query_case_name" class="block text-sm font-medium text-gray-700">用例名称</label>
+                    <input type="text" id="query_case_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_case_hoster" class="block text-sm font-medium text-gray-700">用例作者</label>
+                    <input type="text" id="query_case_hoster" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+            <button id="query_case_btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mt-4">查询</button>
+        </div>
+
+        <div id="result_list" class="mt-4 bg-white p-4 rounded-md shadow-md">
+            <h2 class="text-lg font-bold mb-2">用例列表</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200" id="case_table">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用例名称</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布状态</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API 数量</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用例注释</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="case_list_body" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </body>
-</html>
+
+<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+<script>
+var baseUrl = "http://127.0.0.1:8000/api_platform/";
+var createCasePath = "create_case/";
+var updateCasePath = "update_case/";
+var queryCasePath = "query_case/";
+var deleteCasePath = "delete_case/";
+
+var getUsingApiPath = "query_using_api/";
+var postUsingApiPath = "create_using_api/";
+var putUsingApiPath = "update_using_api/";
+var deleteUsingApiPath = "delete_using_api/";
+
+var queryApiPath = "query_api/";
+
+var currentCaseId = null;
+var isEditingApi = false;
+var tempApiListForCreate = [];
+
+$(document).ready(function () {
+    // 显示创建用例弹窗
+    $("#create_case_btn").click(function () {
+        tempApiListForCreate = [];
+        updateCreateCaseApiList();
+        $("#createCaseModal").css("display", "block");
+    });
+
+    // 关闭创建用例弹窗
+    $(".close").click(function () {
+        $("#createCaseModal").css("display", "none");
+        tempApiListForCreate = [];
+    });
+
+    // 关闭编辑用例弹窗
+    $(".close-edit").click(function () {
+        $("#editCaseModal").css("display", "none");
+    });
+
+    // 关闭详情弹窗
+    $(".close-detail").click(function () {
+        $("#caseDetailModal").css("display", "none");
+    });
+
+    // 关闭 API 弹窗
+    $(".close-api").click(function () {
+        $("#apiToCaseModal").css("display", "none");
+    });
+
+    // 关闭 API 详情弹窗
+    $(".close-api-detail").click(function() {
+        $("#apiDetailModal").css("display", "none");
+    });
+
+    // 点击"添加 API"按钮打开 API 选择弹窗
+    $("#add_api_in_create").click(function() {
+        loadApiListForSelection();
+        $("#selectApiListModal").css("display", "block");
+    });
+
+    // 关闭 API 选择弹窗
+    $(".close-api-list").click(function() {
+        $("#selectApiListModal").css("display", "none");
+    });
+
+    // 点击弹窗外区域关闭弹窗
+    $(window).click(function(event) {
+        if (event.target.id == 'createCaseModal' || event.target.id == 'editCaseModal' ||
+            event.target.id == 'caseDetailModal' || event.target.id == 'apiToCaseModal' ||
+            event.target.id == 'apiDetailModal') {
+            $('#' + event.target.id).hide();
+        }
+    });
+
+    // 确认创建用例
+    $("#confirm_create_case").click(function () {
+        var fullCreateCaseUrl = baseUrl + createCasePath;
+        var postData = {
+            case_name: $("#create_case_name").val(),
+            case_desc: $("#create_case_annotation").val(),
+            api_data_list: tempApiListForCreate
+        };
+
+        $.ajax({
+            url: fullCreateCaseUrl,
+            type: "POST",
+            xhrFields: {
+                withCredentials: true
+            },
+            crossDomain: true,
+            contentType: "application/json",
+            data: JSON.stringify(postData),
+            beforeSend: function(xhr, settings) {
+                console.log("请求发送前 - cookies:", document.cookie);
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function (response) {
+                console.log("成功请求");
+                alert("创建用例成功");
+                $("#createCaseModal").css("display", "none");
+                $("#create_case_name").val("");
+                $("#create_case_annotation").val("");
+                tempApiListForCreate = [];
+                performQuery();
+            },
+            error: function (xhr, status, error) {
+                console.log("请求失败", xhr.responseText);
+                alert("请求失败：" + (xhr.responseText || error));
+            }
+        });
+    });
+
+    // 查询用例
+    $("#query_case_btn").click(function () {
+        performQuery();
+    });
+
+    // 确认编辑用例
+    $("#confirm_edit_case").click(function () {
+        var editCaseUrl = baseUrl + updateCasePath;
+        var caseId = $('#edit_case_id').val();
+        var editData = {
+            case_id: parseInt(caseId),
+            case_name: $('#edit_case_name').val(),
+            case_hoster: '',
+            case_publish: false,
+            api_ids: [],
+            case_desc: $('#edit_case_annotation').val()
+        };
+
+        $.ajax({
+            url: editCaseUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(editData),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                $('#editCaseModal').hide();
+                alert('用例修改成功');
+                performQuery();
+            },
+            error: function(xhr, status, error) {
+                console.error('修改用例失败:', error);
+                alert('修改用例失败：' + (xhr.responseJSON?.message || '请重试'));
+            }
+        });
+    });
+
+    // 查看用例详情
+    $(document).on('click', '.view-case-btn', function() {
+        var caseId = $(this).data('case-id');
+        var caseName = $(this).data('case-name');
+        var caseHoster = $(this).data('case-hoster');
+        var casePublish = $(this).data('case-publish');
+        var caseAnnotation = $(this).data('case-annotation');
+        var apiCount = $(this).data('api-count');
+
+        currentCaseId = caseId;
+        $('#detail_case_name').text(caseName || '');
+        $('#detail_case_hoster').text(caseHoster || '');
+        $('#detail_case_publish').html(casePublish ?
+            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">已发布</span>' :
+            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">未发布</span>');
+        $('#detail_case_annotation').text(caseAnnotation || '无注释');
+        $('#detail_api_count').text(apiCount || 0);
+        $('#caseDetailModal').show();
+
+        loadCaseApis(caseId);
+    });
+
+    // 加载用例中的 API 列表
+    function loadCaseApis(caseId) {
+        var getUrl = baseUrl + getUsingApiPath;
+        $.ajax({
+            url: getUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({case_id: caseId}),
+            xhrFields: {
+                withCredentials: true
+            },
+            success: function(response) {
+                var apiList = response.data || [];
+                var tbody = $('#api_list_body');
+                tbody.empty();
+
+                if (apiList.length === 0) {
+                    tbody.append('<tr><td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">暂无 API</td></tr>');
+                } else {
+                    $.each(apiList, function(index, api) {
+                        var row = $('<tr class="hover:bg-gray-50"></tr>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + (api.id || '') + '</td>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' + (api.api_id || '') + '</td>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + (api.method || '') + '</td>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + (api.params || '') + '</td>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + (api.headers || '') + '</td>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + (api.body || '') + '</td>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + (api.assert_result || '') + '</td>');
+                        row.append('<td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">' + (api.globla_values || '') + '</td>');
+
+                        var actions = '<td class="px-4 py-4 whitespace-nowrap text-sm">';
+                        actions += '<button class="edit-api-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-2 rounded text-xs mr-2" data-api-using-id="' + api.id + '">编辑</button>';
+                        actions += '<button class="delete-api-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs">删除</button>';
+                        actions += '</td>';
+                        row.append(actions);
+
+                        tbody.append(row);
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('加载 API 列表失败:', error);
+                alert('加载 API 列表失败');
+            }
+        });
+    }
+
+    // 添加 API 到用例
+    $("#add_api_to_case").click(function() {
+        isEditingApi = false;
+        $('#api_modal_title').text('添加 API 到用例');
+        $('#current_case_id').val(currentCaseId);
+        $('#api_using_id').val('');
+        $('#select_api_id').prop('disabled', false);
+        $('#api_method').val('GET');
+        $('#api_params').val('');
+        $('#api_headers').val('');
+        $('#api_body').val('');
+        $('#api_assert_result').val('');
+        $('#api_globla_values').val('');
+
+        loadAvailableApis();
+        $('#apiToCaseModal').show();
+    });
+
+    // 加载可用 API 列表
+    function loadAvailableApis() {
+        var queryUrl = baseUrl + queryApiPath;
+        $.ajax({
+            url: queryUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({page: 1, page_size: 100}),
+            xhrFields: {
+                withCredentials: true
+            },
+            success: function(response) {
+                var apiList = response.data || [];
+                var select = $('#select_api_id');
+                select.empty();
+                select.append('<option value="">请选择 API</option>');
+
+                $.each(apiList, function(index, api) {
+                    select.append('<option value="' + api.id + '" ' +
+                        'data-method="' + (api.method || 'GET') + '" ' +
+                        'data-path="' + (api.api_path || '') + '">' +
+                        (api.name || api.id) + ' [' + (api.api_path || '') + ']</option>');
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('加载 API 列表失败:', error);
+            }
+        });
+    }
+
+    // 选择 API 时自动填充请求方式
+    $('#select_api_id').change(function() {
+        var selectedOption = $(this).find('option:selected');
+        var method = selectedOption.data('method');
+        if (method) {
+            $('#api_method').val(method);
+        }
+    });
+
+    // 加载 API 列表供选择
+    function loadApiListForSelection() {
+        var queryUrl = baseUrl + queryApiPath;
+        $.ajax({
+            url: queryUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({page: 1, page_size: 100}),
+            xhrFields: {
+                withCredentials: true
+            },
+            success: function(response) {
+                var apiList = response.data || [];
+                var tbody = $('#api_list_select_body');
+                tbody.empty();
+
+                if (apiList.length === 0) {
+                    tbody.append('<tr><td colspan="5" class="px-4 py-3 text-center text-sm text-gray-500">暂无 API</td></tr>');
+                } else {
+                    $.each(apiList, function(index, api) {
+                        var row = $('<tr class="hover:bg-gray-50"></tr>');
+                        row.append('<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">' + (api.id || '') + '</td>');
+                        row.append('<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">' + (api.name || '') + '</td>');
+                        row.append('<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">' + (api.api_path || '') + '</td>');
+                        row.append('<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">' + (api.method || 'GET') + '</td>');
+
+                        var action = '<td class="px-4 py-3 whitespace-nowrap text-sm">';
+                        action += '<button class="select-api-btn bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs" data-api-id="' + (api.id || '') + '" data-api-name="' + (api.name || '') + '" data-api-path="' + (api.api_path || '') + '" data-api-method="' + (api.method || 'GET') + '">选择</button>';
+                        action += '</td>';
+                        row.append(action);
+
+                        tbody.append(row);
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('加载 API 列表失败:', error);
+                alert('加载 API 列表失败');
+            }
+        });
+    }
+
+    // 选择 API 按钮点击事件
+    $(document).on('click', '.select-api-btn', function() {
+        var apiId = $(this).data('api-id');
+        var apiName = $(this).data('api-name');
+        var apiPath = $(this).data('api-path');
+        var apiMethod = $(this).data('api-method');
+
+        // 关闭选择弹窗
+        $("#selectApiListModal").css("display", "none");
+
+        // 加载 API 详细信息
+        loadApiDetail(apiId, apiName, apiPath, apiMethod);
+    });
+
+    // 加载 API 详细信息并显示详情弹窗
+    function loadApiDetail(apiId, apiName, apiPath, apiMethod) {
+        // 设置基本信息 (只读)
+        $('#detail_api_id').val(apiId);
+        $('#detail_api_name').val(apiName || '');
+        $('#detail_api_path').val(apiPath || '');
+        $('#detail_api_method').val(apiMethod || 'GET');
+
+        // 清空可编辑字段
+        $('#detail_api_params').val('');
+        $('#detail_api_headers').val('');
+        $('#detail_api_body').val('');
+        $('#detail_api_assert_result').val('');
+        $('#detail_api_globla_values').val('');
+
+        // 显示详情弹窗
+        $("#apiDetailModal").css("display", "block");
+    }
+
+    // 确认保存 API 详情并添加到临时列表
+    $("#confirm_save_api_detail").click(function() {
+        var apiId = $('#detail_api_id').val();
+
+        if (!apiId) {
+            alert('请先选择 API');
+            return;
+        }
+
+        var apiData = {
+            api_id: parseInt(apiId),
+            params: $('#detail_api_params').val(),
+            headers: $('#detail_api_headers').val(),
+            body: $('#detail_api_body').val(),
+            method: $('#detail_api_method').val(),
+            assert_result: $('#detail_api_assert_result').val(),
+            globla_values: $('#detail_api_globla_values').val()
+        };
+
+        tempApiListForCreate.push(apiData);
+        updateCreateCaseApiList();
+
+        $('#apiDetailModal').hide();
+        alert('API 已添加到列表');
+    });
+
+    // 更新创建用例弹窗中的 API 列表显示
+    function updateCreateCaseApiList() {
+        var tbody = $('#create_case_api_list');
+        tbody.empty();
+
+        if (tempApiListForCreate.length === 0) {
+            tbody.append('<tr><td colspan="4" class="px-3 py-2 text-center text-sm text-gray-500">暂无 API</td></tr>');
+        } else {
+            $.each(tempApiListForCreate, function(index, api) {
+                var row = $('<tr class="hover:bg-gray-50"></tr>');
+                row.append('<td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">' + api.api_id + '</td>');
+                row.append('<td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">' + api.method + '</td>');
+                row.append('<td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">' + (api.params || '') + '</td>');
+                row.append('<td class="px-3 py-2 whitespace-nowrap text-sm"><button class="remove-api-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs" data-index="' + index + '">删除</button></td>');
+                tbody.append(row);
+            });
+        }
+    }
+
+    // 删除临时 API 列表中的项
+    $(document).on('click', '.remove-api-btn', function() {
+        var index = $(this).data('index');
+        tempApiListForCreate.splice(index, 1);
+        updateCreateCaseApiList();
+    });
+
+    // 确认添加/编辑 API
+    $("#confirm_add_api").click(function() {
+        var caseId = parseInt($('#current_case_id').val());
+        var apiUsingId = $('#api_using_id').val();
+        var apiId = $('#select_api_id').val();
+
+        if (!apiId && !isEditingApi) {
+            alert('请选择 API');
+            return;
+        }
+
+        var postData = {
+            case_id: caseId,
+            params: $('#api_params').val(),
+            headers: $('#api_headers').val(),
+            body: $('#api_body').val(),
+            method: $('#api_method').val(),
+            assert_result: $('#api_assert_result').val(),
+            globla_values: $('#api_globla_values').val()
+        };
+
+        var url;
+        if (isEditingApi && apiUsingId) {
+            url = baseUrl + putUsingApiPath;
+            postData.api_using_id = parseInt(apiUsingId);
+        } else {
+            url = baseUrl + postUsingApiPath;
+            postData.api_id = parseInt(apiId);
+        }
+
+        $.ajax({
+            url: url,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(postData),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                $('#apiToCaseModal').hide();
+                alert(isEditingApi ? 'API 修改成功' : 'API 添加成功');
+                loadCaseApis(caseId);
+            },
+            error: function(xhr, status, error) {
+                console.error('操作失败:', error);
+                alert('操作失败：' + (xhr.responseJSON?.message || '请重试'));
+            }
+        });
+    });
+
+    // 编辑 API
+    $(document).on('click', '.edit-api-btn', function() {
+        var apiUsingId = $(this).data('api-using-id');
+        isEditingApi = true;
+        $('#api_modal_title').text('编辑 API');
+        $('#api_using_id').val(apiUsingId);
+        $('#select_api_id').prop('disabled', true);
+
+        var row = $(this).closest('tr');
+        $('#api_method').val(row.children().eq(2).text().trim());
+        $('#api_params').val(row.children().eq(3).text().trim());
+        $('#api_headers').val(row.children().eq(4).text().trim());
+        $('#api_body').val(row.children().eq(5).text().trim());
+        $('#api_assert_result').val(row.children().eq(6).text().trim());
+        $('#api_globla_values').val(row.children().eq(7).text().trim());
+
+        $('#apiToCaseModal').show();
+    });
+
+    // 删除 API
+    $(document).on('click', '.delete-api-btn', function() {
+        if (!confirm('确定要删除这个 API 吗？')) {
+            return;
+        }
+
+        var button = $(this);
+        var apiUsingId = button.siblings('.edit-api-btn').data('api-using-id');
+        var deleteUrl = baseUrl + deleteUsingApiPath;
+
+        $.ajax({
+            url: deleteUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({api_using_id: apiUsingId}),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                alert('API 删除成功');
+                loadCaseApis(currentCaseId);
+            },
+            error: function(xhr, status, error) {
+                console.error('删除失败:', error);
+                alert('删除失败：' + (xhr.responseJSON?.message || '请重试'));
+            }
+        });
+    });
+
+    // 执行查询
+    function performQuery() {
+        var fullQueryApiUrl = baseUrl + queryCasePath;
+        var queryData = {
+            name: $("#query_case_name").val(),
+            hoster_name: $("#query_case_hoster").val(),
+            page: 1,
+            page_size: 100
+        };
+
+        $.ajax({
+            url: fullQueryApiUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(queryData),
+            xhrFields: {
+                withCredentials: true
+            },
+            success: function (response) {
+                var data = response.data || [];
+                var tbody = $('#case_list_body');
+                tbody.empty();
+
+                if (data.length === 0) {
+                    tbody.append('<tr><td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">没有找到匹配的用例</td></tr>');
+                } else {
+                    $.each(data, function (index, caseItem) {
+                        var row = $("<tr class='hover:bg-gray-50'></tr>");
+                        row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (caseItem.id || '') + "</td>");
+                        row.append("<td class='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>" + (caseItem.name || '') + "</td>");
+                        row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (caseItem.hoster_name || '') + "</td>");
+
+                        var publishBtn = caseItem.publish ?
+                            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">已发布</span>' :
+                            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">未发布</span>';
+                        row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + publishBtn + "</td>");
+
+                        var apiCount = (caseItem.api_ids && Array.isArray(caseItem.api_ids)) ? caseItem.api_ids.length : 0;
+                        row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + apiCount + "</td>");
+                        row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (caseItem.annotation || '') + "</td>");
+
+                        var actions = '<td class="px-6 py-4 whitespace-nowrap text-sm">';
+                        actions += '<button class="view-case-btn bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs mr-2" data-case-id="' + (caseItem.id || '') + '" data-case-name="' + (caseItem.name || '') + '" data-case-hoster="' + (caseItem.hoster_name || '') + '" data-case-publish="' + (caseItem.publish ? '1' : '0') + '" data-case-annotation="' + (caseItem.annotation || '') + '" data-api-count="' + apiCount + '">查看</button>';
+                        actions += '<button class="edit-case-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-2 rounded text-xs mr-2" data-case-id="' + (caseItem.id || '') + '" data-case-name="' + (caseItem.name || '') + '" data-case-annotation="' + (caseItem.annotation || '') + '">编辑</button>';
+                        actions += '<button class="delete-case-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs">删除</button>';
+                        actions += '</td>';
+                        row.append(actions);
+
+                        tbody.append(row);
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.log("请求失败", error);
+                alert("查询失败：" + (xhr.responseJSON?.message || error));
+            }
+        });
+    }
+
+    // 编辑用例按钮
+    $(document).on('click', '.edit-case-btn', function() {
+        var caseId = $(this).data('case-id');
+        var caseName = $(this).data('case-name');
+        var caseAnnotation = $(this).data('case-desc');
+
+        $('#edit_case_id').val(caseId);
+        $('#edit_case_name').val(caseName);
+        $('#edit_case_annotation').val(caseAnnotation);
+        $('#editCaseModal').show();
+    });
+
+    // 删除用例按钮
+    $(document).on('click', '.delete-case-btn', function() {
+        if (!confirm('确定要删除这个用例吗？此操作不可撤销。')) {
+            return;
+        }
+
+        var button = $(this);
+        var caseId = button.siblings('.view-case-btn').data('case-id');
+        var deleteUrl = baseUrl + deleteCasePath;
+
+        $.ajax({
+            url: deleteUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({case_id: caseId}),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                button.closest('tr').fadeOut(300, function() {
+                    $(this).remove();
+                });
+                alert('用例删除成功');
+            },
+            error: function(xhr, status, error) {
+                console.error('删除用例失败:', error);
+                alert('删除用例失败：' + (xhr.responseJSON?.message || '请重试'));
+            }
+        });
+    });
+});
+</script>

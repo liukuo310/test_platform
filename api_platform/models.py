@@ -19,7 +19,6 @@ class Api(models.Model):
     params = models.CharField(max_length=60, verbose_name="请求参数", null=True)
     desc = models.CharField(max_length=60, verbose_name="接口注释", null=True)
     publish = models.BooleanField(verbose_name="接口是否发布", null=True)
-
     def to_dict(self):
         return {
             "name": self.name,
@@ -53,3 +52,11 @@ class Case(models.Model):
     publish = models.BooleanField(verbose_name="用例是否发布")
     api_ids = models.JSONField(verbose_name="接口ID组合")
     annotation = models.CharField(max_length=60, verbose_name="用例注释")
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "hoster_name": self.hoster_name,
+            "publish": self.publish,
+            "api_ids": self.api_ids,
+            "annotation": self.annotation
+        }
