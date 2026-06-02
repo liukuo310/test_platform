@@ -195,11 +195,13 @@ def delete_api(request):
 def update_case(request):
     """修改用例"""
     try:
+        print(f"传递的参数是:{request.body}")
         data = json.loads(request.body)
         case_id = data.get("case_id")
         if not case_id:
             return JsonResponse({'message': 'Invalid Case ID'}, status=400)
         case = Case.objects.get(id=case_id)
+        api_using_old_list = ApiUsing.objects.filter(case_id=case_id)
         # 更新用例数据
         case.name = data.get("case_name")
         case.hoster_name = data.get("case_hoster")
@@ -207,6 +209,16 @@ def update_case(request):
         case.api_ids = data.get("api_ids")
         case.annotation = data.get("case_desc")
         case.save()
+        apiusing_list = [ApiUsing(api_id=api_id) for api_id in data.get("apiusing_list")]
+        if not api_using_old_list:  # 没有任何值时认为全删除
+            for api_using_old in api_using_old_list:
+                api_using_old.delete()
+        for apiusing in apiusing_list:
+            if apiusing.api_id not in api_using_old_list:  # 没有则创建
+                pass
+
+
+        return JsonResponse({'message': 'Update Case successfully'}, status=200)
     except Case.DoesNotExist:
         return JsonResponse({'message': 'Case not found'}, status=404)
     except json.JSONDecodeError:
@@ -280,11 +292,16 @@ def create_case(request):
     except json.JSONDecodeError:
         return JsonResponse({'message': 'Invalid JSON format'}, status=400)
     acount = request.session.get("user_count")
-    api_all_obj = Api.objects.all()
     user_name = User.objects.get(count=acount).name
     api_id_list = []
+    case_name = data.get("case_name")
+    case_desc = data.get("case_desc")
+    if not case_name:
+        return JsonResponse({'message': 'Invalid Case Name'}, status=400)
+    if not case_desc:
+        return JsonResponse({'message': 'Invalid Case Desc'}, status=400)
     case = Case(
-        name=data.get("case_name"),
+        name=case_name,
         hoster_name=user_name,
         publish=False,
         api_ids=[],
@@ -295,24 +312,21 @@ def create_case(request):
     if api_data_list:  # 允许没有借口的情况，仅创建用例
         for api_data in api_data_list:
             api_id = api_data.get("api_id")
-            api_obj = api_all_obj.filter(id=api_id).first()
             api_id_list.append(api_id)
             ApiUsing.objects.create(
                 case_id=case,
                 api_id=api_id,
                 hoster_name=user_name,
-                params=api_data.get("params", api_obj.params if api_obj else ""),
-                headers=api_data.get("headers", api_obj.headers if api_obj else ""),
-                body=api_data.get("body", api_obj.body if api_obj else ""),
-                method=api_data.get("method", api_obj.method if api_obj else "GET"),
+                params=api_data.get("params", ""),
+                headers=api_data.get("headers", ""),
+                body=api_data.get("body", ""),
+                method=api_data.get("method", "GET"),
                 assert_result=api_data.get("assert_result", ""),
                 globla_values=api_data.get("globla_values", ""),
             )
-
     case.api_ids = api_id_list
     case.save()
     return JsonResponse({'message': '用例创建成功', 'case_id': case.id})
-
 
 def delete_case(request):
     """删除接口"""
