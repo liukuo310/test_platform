@@ -35,6 +35,7 @@ class Api(models.Model):
 
 
 class ApiUsing(models.Model):
+    id = models.AutoField(primary_key=True)
     case_id = models.ForeignKey("Case", on_delete=models.CASCADE)
     hoster_name = models.CharField(max_length=60, verbose_name="作者名称")
     api_id = models.CharField(max_length=60, verbose_name="接口ID")
@@ -47,6 +48,7 @@ class ApiUsing(models.Model):
 
 
 class Case(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=60, verbose_name="用例名称")
     hoster_name = models.CharField(max_length=60, verbose_name="作者名称")
     publish = models.BooleanField(verbose_name="用例是否发布")

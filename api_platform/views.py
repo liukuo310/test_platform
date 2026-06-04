@@ -197,27 +197,56 @@ def update_case(request):
     try:
         print(f"传递的参数是:{request.body}")
         data = json.loads(request.body)
+        new_api_list = data.get("api_data_list")
         case_id = data.get("case_id")
+        acount = request.session.get("user_count")
+        user_name = User.objects.get(count=acount).name
         if not case_id:
             return JsonResponse({'message': 'Invalid Case ID'}, status=400)
         case = Case.objects.get(id=case_id)
-        api_using_old_list = ApiUsing.objects.filter(case_id=case_id)
+        old_api_list = ApiUsing.objects.filter(case_id=case_id)
+        old_api_using_id_list = [api.id for api in old_api_list]
         # 更新用例数据
         case.name = data.get("case_name")
         case.hoster_name = data.get("case_hoster")
         case.publish = data.get("case_publish")
-        case.api_ids = data.get("api_ids")
+        api_using_ids_list = data.get("api_using_ids")
         case.annotation = data.get("case_desc")
-        case.save()
-        apiusing_list = [ApiUsing(api_id=api_id) for api_id in data.get("apiusing_list")]
-        if not api_using_old_list:  # 没有任何值时认为全删除
-            for api_using_old in api_using_old_list:
+
+        if not new_api_list:  # 没有任何值时认为全删除
+            for api_using_old in old_api_list:
                 api_using_old.delete()
-        for apiusing in apiusing_list:
-            if apiusing.api_id not in api_using_old_list:  # 没有则创建
-                pass
-
-
+        else:
+            for index, new_api_data in enumerate(new_api_list):
+                print(f"新数据是:{new_api_data}")
+                api_using_id = new_api_data.get("api_using_id", 0)
+                api_id = new_api_data.get("api_id")
+                if api_using_id==0:  # 0为没有，没有则创建
+                    new_api_using = ApiUsing.objects.create(
+                        case_id=case,
+                        api_id=api_id,
+                        hoster_name=user_name,
+                        params=new_api_data.get("params", ""),
+                        headers=new_api_data.get("headers", ""),
+                        body=new_api_data.get("body", ""),
+                        method=new_api_data.get("method", "GET"),
+                        assert_result=new_api_data.get("assert_result", ""),
+                        globla_values=new_api_data.get("globla_values", ""),
+                    )
+                    api_using_ids_list[index] = new_api_using.id
+                else:  # 存在则更新
+                    api_using_old = ApiUsing.objects.get(id=api_using_id)
+                    for key, value in new_api_data.items():
+                        if key == "api_id" or key == "api_using_id":
+                            continue
+                        if hasattr(api_using_old, key):
+                            setattr(api_using_old, key, value)
+                    api_using_old.save()
+                    old_api_using_id_list.remove(api_using_id)
+            case.api_ids = api_using_ids_list
+            case.save()
+        for old_api_using_id in old_api_using_id_list:  # 更新时删除之前存在的接口数据
+            ApiUsing.objects.get(id=old_api_using_id).delete()
         return JsonResponse({'message': 'Update Case successfully'}, status=200)
     except Case.DoesNotExist:
         return JsonResponse({'message': 'Case not found'}, status=404)
