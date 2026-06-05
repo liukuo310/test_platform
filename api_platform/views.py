@@ -197,13 +197,19 @@ def update_case(request):
     try:
         print(f"传递的参数是:{request.body}")
         data = json.loads(request.body)
-        new_api_list = data.get("api_data_list")
+        update_tyoe = data.get("update_type")
         case_id = data.get("case_id")
+        case = Case.objects.get(id=case_id)
+        if update_tyoe == "publish":
+            case.publish = data.get("case_publish")
+            case.save()
+            return JsonResponse({'message': "Update Case successfully"}, status=200)
+        new_api_list = data.get("api_data_list")
         acount = request.session.get("user_count")
         user_name = User.objects.get(count=acount).name
         if not case_id:
             return JsonResponse({'message': 'Invalid Case ID'}, status=400)
-        case = Case.objects.get(id=case_id)
+
         old_api_list = ApiUsing.objects.filter(case_id=case_id)
         old_api_using_id_list = [api.id for api in old_api_list]
         # 更新用例数据
@@ -446,3 +452,7 @@ def query_using_api(request):
     except Exception as e:
         return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
 
+
+def test_case(request):
+    """测试接口"""
+    return JsonResponse({'message': '测试接口返回成功'}, status=200)

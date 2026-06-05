@@ -433,9 +433,58 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- 分页控件 -->
+            <div id="case_pagination_controls" class="mt-4 flex items-center justify-between bg-white p-4 rounded-md shadow-md hidden">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700">
+                        共 <span id="case_total_count" class="font-semibold">0</span> 条记录，
+                        第 <span id="case_current_page" class="font-semibold">1</span> 页，
+                        共 <span id="case_total_pages" class="font-semibold">1</span> 页
+                    </span>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <!-- 每页显示条数选择 -->
+                    <select id="case_page_size_select" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
+                        <option value="5">5条/页</option>
+                        <option value="10" selected>10条/页</option>
+                        <option value="20">20条/页</option>
+                        <option value="50">50条/页</option>
+                    </select>
+
+                    <!-- 分页按钮组 -->
+                    <div class="flex space-x-1">
+                        <button id="case_first_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            首页
+                        </button>
+                        <button id="case_prev_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            上一页
+                        </button>
+
+                        <!-- 页码显示区域 -->
+                        <div id="case_page_numbers" class="flex space-x-1"></div>
+
+                        <button id="case_next_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            下一页
+                        </button>
+                        <button id="case_last_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            末页
+                        </button>
+                    </div>
+
+                    <!-- 跳转到指定页 -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-700">跳转到</span>
+                        <input type="number" id="case_jump_page_input" min="1" class="w-16 border border-gray-300 rounded px-2 py-1 text-sm">
+                        <button id="case_jump_page_btn" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                            GO
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
 </body>
 
 <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
@@ -457,6 +506,13 @@ var currentCaseId = null;
 var isEditingApi = false;
 var tempApiListForCreate = [];
 var tempApiListForEdit = [];
+
+// 添加分页相关的全局变量
+var caseCurrentPage = 1;
+var casePageSize = 10;
+var caseTotalPage = 1;
+var caseTotalCount = 0;
+
 
 $(document).ready(function () {
     // 显示创建用例弹窗
@@ -576,7 +632,63 @@ $(document).ready(function () {
 
     // 查询用例
     $("#query_case_btn").click(function () {
+        caseCurrentPage = 1; // 重置到第一页
         performQuery();
+    });
+
+    // 每页显示条数改变事件
+    $("#case_page_size_select").change(function() {
+        casePageSize = parseInt($(this).val());
+        caseCurrentPage = 1;
+        performQuery();
+    });
+
+    // 首页按钮
+    $("#case_first_page").click(function() {
+        if (caseCurrentPage > 1) {
+            caseCurrentPage = 1;
+            performQuery();
+        }
+    });
+
+    // 上一页按钮
+    $("#case_prev_page").click(function() {
+        if (caseCurrentPage > 1) {
+            caseCurrentPage--;
+            performQuery();
+        }
+    });
+
+    // 下一页按钮
+    $("#case_next_page").click(function() {
+        if (caseCurrentPage < caseTotalPage) {
+            caseCurrentPage++;
+            performQuery();
+        }
+    });
+
+    // 末页按钮
+    $("#case_last_page").click(function() {
+        if (caseCurrentPage < caseTotalPage) {
+            caseCurrentPage = caseTotalPage;
+            performQuery();
+        }
+    });
+
+    // 跳转到指定页
+    $("#case_jump_page_btn").click(function() {
+        var jumpPage = parseInt($("#case_jump_page_input").val());
+        if (jumpPage >= 1 && jumpPage <= caseTotalPage && jumpPage !== caseCurrentPage) {
+            caseCurrentPage = jumpPage;
+            performQuery();
+        }
+    });
+
+    // 回车键跳转
+    $("#case_jump_page_input").keypress(function(e) {
+        if (e.which === 13) { // Enter键
+            $("#case_jump_page_btn").click();
+        }
     });
 
     // 确认编辑用例
@@ -988,8 +1100,8 @@ $(document).ready(function () {
         var queryData = {
             name: $("#query_case_name").val(),
             hoster_name: $("#query_case_hoster").val(),
-            page: 1,
-            page_size: 100
+            page: caseCurrentPage,
+            page_size: casePageSize
         };
 
         $.ajax({
@@ -1002,27 +1114,38 @@ $(document).ready(function () {
             },
             success: function (response) {
                 var data = response.data || [];
+                var pagination = response.pagination || {};
+
+                // 更新分页信息
+                caseTotalCount = pagination.total_count || 0;
+                caseTotalPage = pagination.total_pages || 1;
+                caseCurrentPage = pagination.current_page || 1;
+
+                // 更新分页控件显示
+                updateCasePaginationControls(pagination);
+
                 var tbody = $('#case_list_body');
                 tbody.empty();
 
                 if (data.length === 0) {
                     tbody.append('<tr><td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">没有找到匹配的用例</td></tr>');
+                    $("#case_pagination_controls").addClass("hidden");
                 } else {
+                    // 显示分页控件
+                    $("#case_pagination_controls").removeClass("hidden");
+
                     $.each(data, function (index, caseItem) {
                         var row = $("<tr class='hover:bg-gray-50'></tr>");
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (caseItem.id || '') + "</td>");
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>" + (caseItem.name || '') + "</td>");
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (caseItem.hoster_name || '') + "</td>");
-
                         var publishBtn = caseItem.publish ?
-                            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">已发布</span>' :
-                            '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">未发布</span>';
+                            '<button class="publish-case-btn bg-green-500 hover:bg-green-600 text-white py-1 px-2 rounded text-xs" data-case-id="' + (caseItem.id || '') + '" data-status="true">已发布</button>' :
+                            '<button class="publish-case-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs" data-case-id="' + (caseItem.id || '') + '" data-status="false">未发布</button>';
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + publishBtn + "</td>");
-
                         var apiCount = (caseItem.api_ids && Array.isArray(caseItem.api_ids)) ? caseItem.api_ids.length : 0;
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + apiCount + "</td>");
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (caseItem.annotation || '') + "</td>");
-
                         var actions = '<td class="px-6 py-4 whitespace-nowrap text-sm">';
                         actions += '<button class="edit-case-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-2 rounded text-xs mr-2" data-case-id="' + (caseItem.id || '') + '" data-case-name="' + (caseItem.name || '') + '" data-case-hoster="' + (caseItem.hoster_name || '') + '" data-case-publish="' + (caseItem.publish ? '1' : '0') + '" data-case-annotation="' + (caseItem.annotation || '') + '" data-api-count="' + apiCount + '">编辑</button>';
                         actions += '<button class="delete-case-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs">删除</button>';
@@ -1039,6 +1162,162 @@ $(document).ready(function () {
             }
         });
     }
+
+
+    // 更新分页控件
+    function updateCasePaginationControls(pagination) {
+        // 更新统计信息
+        $("#case_total_count").text(pagination.total_count || 0);
+        $("#case_current_page").text(pagination.current_page || 1);
+        $("#case_total_pages").text(pagination.total_pages || 1);
+
+        // 更新按钮状态
+        var hasPrevious = pagination.has_previous || false;
+        var hasNext = pagination.has_next || false;
+
+        $("#case_first_page").prop("disabled", !hasPrevious);
+        $("#case_prev_page").prop("disabled", !hasPrevious);
+        $("#case_next_page").prop("disabled", !hasNext);
+        $("#case_last_page").prop("disabled", !hasNext);
+
+        // 更新页码显示
+        updateCasePageNumbers(pagination.current_page, pagination.total_pages);
+
+        // 更新跳转输入框的最大值
+        $("#case_jump_page_input").attr("max", pagination.total_pages);
+    }
+
+    // 更新页码显示
+    function updateCasePageNumbers(currentPage, totalPages) {
+        var pageNumbersContainer = $("#case_page_numbers");
+        pageNumbersContainer.empty();
+
+        if (totalPages <= 7) {
+            // 如果总页数较少，显示所有页码
+            for (var i = 1; i <= totalPages; i++) {
+                var button = createCasePageButton(i, i === currentPage);
+                pageNumbersContainer.append(button);
+            }
+        } else {
+            // 如果总页数较多，显示省略号效果
+            if (currentPage <= 4) {
+                // 当前页在前面
+                for (var i = 1; i <= 5; i++) {
+                    var button = createCasePageButton(i, i === currentPage);
+                    pageNumbersContainer.append(button);
+                }
+                pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+                var lastButton = createCasePageButton(totalPages, false);
+                pageNumbersContainer.append(lastButton);
+            } else if (currentPage >= totalPages - 3) {
+                // 当前页在后面
+                var firstButton = createCasePageButton(1, false);
+                pageNumbersContainer.append(firstButton);
+                pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+                for (var i = totalPages - 4; i <= totalPages; i++) {
+                    var button = createCasePageButton(i, i === currentPage);
+                    pageNumbersContainer.append(button);
+                }
+            } else {
+                // 当前页在中间
+                var firstButton = createCasePageButton(1, false);
+                pageNumbersContainer.append(firstButton);
+                pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+                for (var i = currentPage - 1; i <= currentPage + 1; i++) {
+                    var button = createCasePageButton(i, i === currentPage);
+                    pageNumbersContainer.append(button);
+                }
+                pageNumbersContainer.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+                var lastButton = createCasePageButton(totalPages, false);
+                pageNumbersContainer.append(lastButton);
+            }
+        }
+    }
+
+    // 创建页码按钮
+    function createCasePageButton(pageNum, isActive) {
+        var classes = "px-3 py-1 border rounded text-sm ";
+        if (isActive) {
+            classes += "bg-blue-500 text-white border-blue-500";
+        } else {
+            classes += "border-gray-300 hover:bg-gray-100";
+        }
+
+        var button = $("<button>", {
+            class: classes,
+            text: pageNum,
+            click: function() {
+                if (!isActive) {
+                    caseCurrentPage = pageNum;
+                    performQuery();
+                }
+            }
+        });
+
+        return button;
+    }
+
+
+
+    // 添加用例发布按钮点击事件监听器
+    $(document).on('click', '.publish-case-btn', function() {
+        var button = $(this);
+        var caseId = button.data('case-id');
+        var currentStatus = button.data('status') === 'true';
+        var newStatus = !currentStatus;  // 切换状态
+
+        // 防止重复点击
+        if (button.hasClass('updating')) {
+            return;
+        }
+
+        // 添加加载状态
+        button.addClass('updating opacity-75');
+        button.text('处理中...');
+
+        // 构建API URL
+        var updateCaseUrl = baseUrl + updateCasePath;
+
+        // 发送请求切换发布状态，传递 update_type 参数
+        $.ajax({
+            url: updateCaseUrl,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                case_id: caseId,
+                case_publish: newStatus,
+                update_type: 'publish'  // 标记为更新发布状态
+            }),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                // 成功后更新按钮状态
+                button.removeClass('bg-red-500 bg-green-500 updating opacity-75');
+                button.addClass(newStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+                button.text(newStatus ? '已发布' : '未发布');
+                button.data('status', newStatus.toString());
+                alert('发布状态更新成功');
+            },
+            error: function(xhr, status, error) {
+                // 失败时恢复原状态
+                button.removeClass('updating opacity-75');
+                button.text(currentStatus ? '已发布' : '未发布');
+                button.removeClass('bg-red-500 bg-green-500');
+                button.addClass(currentStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+
+                console.error('发布状态更新失败:', error);
+                alert('发布状态更新失败：' + (xhr.responseJSON?.message || '请重试'));
+            }
+        });
+    });
+
 
     // 编辑用例按钮（统一入口）
     $(document).on('click', '.edit-case-btn', function() {

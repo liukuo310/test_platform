@@ -21,4 +21,6 @@ urlpatterns = [
     path("update_case/", views.update_case, name="update_case"),
     path("query_case/", views.get_case, name="get_case"),
     path("delete_case/", views.delete_case, name="delete_case"),
+
+    path("test/", views.test_case, name="test_case")  # 平台测试接口使用
 ]
