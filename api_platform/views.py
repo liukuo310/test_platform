@@ -1,6 +1,6 @@
 import json
-
-
+import requests
+from django.contrib.admin.templatetags.admin_list import result_list
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.generic import View
@@ -452,7 +452,78 @@ def query_using_api(request):
     except Exception as e:
         return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
 
+def run_test(request):
+    """运行接口"""
+    try:
+        data = json.loads(request.body)
+        test_type = data.get("type")
+        en_re = data.get("environment")
+        print(test_type)
+        print(en_re)
+        en_map = {
+            "1": "http://127.0.0.1:8000/",
+            "2": "http://127.0.0.1:8000/",
+            "3": "http://127.0.0.1:8000/",
+        }
+        en = en_map.get(en_re, "http://127.0.0.1:8000/")  # 默认在测试环境运行
+        if test_type == "case":
+            result = run_case(data.get("id"), en)
+            return JsonResponse({'message': '用例运行成功', 'data': result}, status=200)
+        elif test_type == "api":
+            result = run_api(test_type, data.get("id"), en)
+            return JsonResponse({'message': '接口运行成功', 'data': result}, status=200)
+        elif test_type == "cidi":  # 持续集成
+            pass
+        else:
+            pass
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
+
+def run_api(api_type, api_id, en):
+    """运行接口"""
+    import requests
+    if api_type == "api_using":  # 使用接口单独调试
+        api_using = ApiUsing.objects.get(id=api_id)
+        api = Api.objects.get(case_id=api_using.case_id)
+        url = en + api.api_path
+        headers = api_using.headers
+        method = api_using.method
+        body = api_using.body
+    else:
+        api = Api.objects.get(id=api_id)
+        url = en + api.api_path
+        headers = api.headers
+        method = api.method
+        body = api.body
+    try:
+        if method == "GET":
+            response = requests.get(url, headers=headers)
+        elif method == "POST":
+            response = requests.post(url, headers=headers, json=body)
+        elif method == "PUT":
+            response = requests.put(url, headers=headers, json=body)
+        elif method == "DELETE":
+            response = requests.delete(url, headers=headers)
+        else:
+            raise ValueError("Invalid method")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": str(e)}
+
+def run_case(case_id, en):
+    """运行用例"""
+    all_apiusing = ApiUsing.objects.filter(case_id=case_id)
+    result_list = []
+    for apiusing_data in all_apiusing:
+        result = run_api("api_using", apiusing_data.id, en)
+        result_list.append(result)
+    return result_list
 
 def test_case(request):
     """测试接口"""
+    print("走到测试接口了")
     return JsonResponse({'message': '测试接口返回成功'}, status=200)

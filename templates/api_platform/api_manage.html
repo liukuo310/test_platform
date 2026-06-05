@@ -93,10 +93,79 @@
             color: #1f2937;
         }
 
+        /* 底部滑出半屏弹窗样式 */
+        .bottom-sheet-content {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fefefe;
+            border-radius: 1rem 1rem 0 0;
+            padding: 2rem;
+            height: 70vh;
+            max-height: 70vh;
+            overflow-y: auto;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.3s ease-out;
+            z-index: 1003;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
     </style>
 </head>
 
 <body class="bg-gray-100 font-sans">
+
+    <!-- API 测试半屏弹窗 -->
+    <div id="apiTestModal" class="modal" style="z-index: 1002;">
+        <div class="bottom-sheet-content" style="height: 70vh; max-height: 70vh;">
+            <span class="close-test" style="position: absolute; top: 1rem; right: 1.5rem; color: #9ca3af; font-size: 2rem; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">API 测试</h2>
+
+            <div class="mb-4 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                <p class="text-sm text-blue-700"><strong>API ID:</strong> <span id="test_api_id"></span></p>
+                <p class="text-sm text-blue-700"><strong>API 名称:</strong> <span id="test_api_name"></span></p>
+            </div>
+
+            <div class="mb-4">
+                <label for="test_environment" class="block text-sm font-medium text-gray-700 mb-2">选择测试环境</label>
+                <select id="test_environment" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="1">测试环境</option>
+                    <option value="2">线上环境</option>
+                    <option value="3">开发环境</option>
+                </select>
+            </div>
+
+            <div class="mb-4 flex gap-3">
+                <button id="start_test_btn" class="bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center gap-2">
+                    <i class="fas fa-play"></i> 开始测试
+                </button>
+                <button id="close_test_btn" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
+                    关闭
+                </button>
+            </div>
+
+            <div id="test_result_container" class="border border-gray-300 rounded-md p-4 bg-gray-50 min-h-[300px] max-h-[calc(70vh-250px)] overflow-y-auto">
+                <div id="test_loading_indicator" class="hidden flex flex-col items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+                    <p class="text-gray-600">正在测试中，请稍候...</p>
+                </div>
+                <div id="test_result_content">
+                    <p class="text-gray-500 text-center">点击"开始测试"按钮执行接口测试</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 创建接口弹窗 -->
     <div id="myModal" class="modal">
         <div class="modal-content">
@@ -301,6 +370,7 @@ var createApiPath = "create_api/";
 var queryApiPath = "query_api/";
 var deleteApiPath = "delete_api/";
 var updateApiPath = "update_api/";
+var runTestPath = "run_test/";
 
 // 添加分页相关的全局变量
 var currentPage = 1;
@@ -311,6 +381,119 @@ var totalCount = 0;
 $(document).ready(function () {
     console.log("页面加载时的 cookies:", document.cookie);
 
+    // 关闭测试弹窗
+    $(".close-test, #close_test_btn").click(function () {
+        $("#apiTestModal").css("display", "none");
+        $("#test_result_content").html('<p class="text-gray-500 text-center">点击"开始测试"按钮执行接口测试</p>');
+        $("#test_loading_indicator").addClass("hidden");
+    });
+
+    // 点击弹窗外区域关闭测试弹窗
+    $(window).click(function(event) {
+        if (event.target.id == 'apiTestModal') {
+            $('#apiTestModal').hide();
+            $("#test_result_content").html('<p class="text-gray-500 text-center">点击"开始测试"按钮执行接口测试</p>');
+            $("#test_loading_indicator").addClass("hidden");
+        }
+    });
+
+    // 开始测试按钮点击事件
+    $("#start_test_btn").click(function() {
+        var apiId = $("#test_api_id").text();
+        if (!apiId) {
+            alert('请先选择要测试的 API');
+            return;
+        }
+
+        var environment = $("#test_environment").val();
+        if (!environment) {
+            alert('请选择测试环境');
+            return;
+        }
+
+        // 显示加载动画
+        $("#test_loading_indicator").removeClass("hidden");
+        $("#test_result_content").empty();
+        $("#start_test_btn").prop("disabled", true).addClass("opacity-50");
+
+        // 发送测试请求
+        $.ajax({
+            url: baseUrl + runTestPath,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                type: "api",
+                id: parseInt(apiId),
+                environment: parseInt(environment)
+            }),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                // 隐藏加载动画
+                $("#test_loading_indicator").addClass("hidden");
+                $("#start_test_btn").prop("disabled", false).removeClass("opacity-50");
+
+                // 显示测试结果
+                var resultHtml = '<div class="space-y-4">';
+                resultHtml += '<div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">';
+                resultHtml += '<p class="text-green-700 font-semibold"><i class="fas fa-check-circle"></i> 测试成功</p>';
+                resultHtml += '</div>';
+
+                resultHtml += '<div class="bg-white border border-gray-300 rounded p-3">';
+                resultHtml += '<p class="text-sm font-semibold text-gray-700 mb-2">返回结果：</p>';
+                resultHtml += '<pre class="bg-gray-100 p-3 rounded overflow-x-auto text-sm">' + JSON.stringify(response.data, null, 2) + '</pre>';
+                resultHtml += '</div>';
+                resultHtml += '</div>';
+
+                $("#test_result_content").html(resultHtml);
+            },
+            error: function(xhr, status, error) {
+                // 隐藏加载动画
+                $("#test_loading_indicator").addClass("hidden");
+                $("#start_test_btn").prop("disabled", false).removeClass("opacity-50");
+
+                // 显示错误信息
+                var errorHtml = '<div class="bg-red-50 border-l-4 border-red-500 p-3 rounded">';
+                errorHtml += '<p class="text-red-700 font-semibold"><i class="fas fa-times-circle"></i> 测试失败</p>';
+                errorHtml += '</div>';
+
+                errorHtml += '<div class="bg-white border border-gray-300 rounded p-3 mt-3">';
+                errorHtml += '<p class="text-sm font-semibold text-gray-700 mb-2">错误信息：</p>';
+                errorHtml += '<pre class="bg-gray-100 p-3 rounded overflow-x-auto text-sm text-red-600">' + (xhr.responseJSON?.message || error || '未知错误') + '</pre>';
+                errorHtml += '</div>';
+
+                $("#test_result_content").html(errorHtml);
+            }
+        });
+    });
+
+    // 添加测试按钮点击事件监听器
+    $(document).on('click', '.test-btn', function() {
+        var apiId = $(this).data('api-id');
+        var apiName = $(this).data('api-name');
+
+        // 设置测试弹窗中的 API 信息
+        $("#test_api_id").text(apiId);
+        $("#test_api_name").text(apiName);
+
+        // 重置环境选择为默认值（测试环境）
+        $("#test_environment").val("1");
+
+        // 重置测试结果区域
+        $("#test_result_content").html('<p class="text-gray-500 text-center">点击"开始测试"按钮执行接口测试</p>');
+        $("#test_loading_indicator").addClass("hidden");
+        $("#start_test_btn").prop("disabled", false).removeClass("opacity-50");
+
+        // 显示测试弹窗
+        $("#apiTestModal").css("display", "block");
+    });
 
     // 显示创建接口弹窗
     $("#create_api").click(function () {
@@ -505,6 +688,7 @@ function performQuery() {
                 headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>发布</th>");
                 headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>删除</th>");
                 headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>修改</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>测试</th>");
                 thead.append(headerRow);
 
                 // 表体
@@ -528,6 +712,8 @@ function performQuery() {
                     row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + deleteButton + "</td>");
                     var editButton = createEditButton(item_data.id);
                     row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + editButton + "</td>");
+                    var testButton = createTestButton(item_data.id, item_data.name);
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + testButton + "</td>");
                     tbody.append(row);
                 });
 
@@ -636,226 +822,234 @@ function createPageButton(pageNum, isActive) {
 }
 
 
-    function createEditButton(apiId) {
-        return '<button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">修改</button>';
-    }
+function createEditButton(apiId) {
+    return '<button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">修改</button>';
+}
 
-            // 添加编辑按钮点击事件监听器
-    $(document).on('click', '.edit-btn', function() {
-        var apiId = $(this).data('api-id');
-
-        // 查找当前行的数据并填充到编辑表单
-        var row = $(this).closest('tr');
-        $('#edit_api_id').val(apiId);
-        $('#edit_api_name').val(row.children().eq(2).text()); // 接口名称
-        $('#edit_url').val(row.children().eq(3).text());      // 域名
-        $('#edit_api_path').val(row.children().eq(4).text()); // 接口路径
-        $('#edit_method').val(row.children().eq(5).text());   // 请求方式
-        $('#edit_headers').val(row.children().eq(6).text());  // 请求头
-        $('#edit_body').val(row.children().eq(7).text());     // 请求体
-        $('#edit_annotation').val(row.children().eq(8).text()); // 注释
-
-        // 显示编辑弹窗
-        $('#editModal').show();
-    });
-
-    // 关闭编辑弹窗
-    $('.close-edit').click(function() {
-        $('#editModal').hide();
-    });
-
-    // 确定修改按钮点击事件
-    $('#confirm_edit').click(function() {
-        var editApiUrl = baseUrl + updateApiPath;
-        var apiId = $('#edit_api_id').val();
-
-        var editData = {
-            api_id: parseInt(apiId),
-            api_name: $('#edit_api_name').val(),
-            api_url: $('#edit_url').val(),
-            api_path: $('#edit_api_path').val(),
-            api_method: $('#edit_method').val(),
-            api_header: $('#edit_headers').val(),
-            api_body: $('#edit_body').val(),
-            api_desc: $('#edit_annotation').val()
-        };
-
-        $.ajax({
-            url: editApiUrl,
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify(editData),
-            xhrFields: {
-                withCredentials: true
-            },
-            beforeSend: function(xhr, settings) {
-                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                if (csrfToken) {
-                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                }
-            },
-            success: function(response) {
-                // 更新表格中的数据显示
-                var row = $(`.edit-btn[data-api-id="${apiId}"]`).closest('tr');
-                row.children().eq(2).text(editData.api_name); // 接口名称
-                row.children().eq(3).text(editData.api_url);  // 域名
-                row.children().eq(4).text(editData.api_path); // 接口路径
-                row.children().eq(5).text(editData.api_method); // 请求方式
-                row.children().eq(6).text(editData.api_header); // 请求头
-                row.children().eq(7).text(editData.api_body);   // 请求体
-                row.children().eq(8).text(editData.api_desc);   // 注释
-
-                $('#editModal').hide();
-                alert('接口修改成功');
-            },
-            error: function(xhr, status, error) {
-                console.error('修改接口失败:', error);
-                alert('修改接口失败: ' + (xhr.responseJSON?.message || '请重试'));
-            }
-        });
-    });
-
-    // 点击弹窗外区域关闭弹窗
-    $(window).click(function(event) {
-        if (event.target.id == 'editModal') {
-            $('#editModal').hide();
-        }
-    });
+// 创建测试按钮
+function createTestButton(apiId, apiName) {
+    return '<button class="test-btn bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" data-api-id="' + apiId + '" data-api-name="' + (apiName || '') + '">测试</button>';
+}
 
 
 
-    // 修改删除按钮创建函数
-    function createDeleteButton(apiId) {
-        return '<button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">删除</button>';
-    }
+// 添加编辑按钮点击事件监听器
+$(document).on('click', '.edit-btn', function() {
+    var apiId = $(this).data('api-id');
 
-            // 添加删除按钮点击事件监听器
-    $(document).on('click', '.delete-btn', function() {
-        var button = $(this);
-        var apiId = button.data('api-id');
+    // 查找当前行的数据并填充到编辑表单
+    var row = $(this).closest('tr');
+    $('#edit_api_id').val(apiId);
+    $('#edit_api_name').val(row.children().eq(2).text()); // 接口名称
+    $('#edit_url').val(row.children().eq(3).text());      // 域名
+    $('#edit_api_path').val(row.children().eq(4).text()); // 接口路径
+    $('#edit_method').val(row.children().eq(5).text());   // 请求方式
+    $('#edit_headers').val(row.children().eq(6).text());  // 请求头
+    $('#edit_body').val(row.children().eq(7).text());     // 请求体
+    $('#edit_annotation').val(row.children().eq(8).text()); // 注释
 
-        // 确认删除操作
-        if (!confirm('确定要删除这个接口吗？此操作不可撤销。')) {
-            return;
-        }
-
-        // 防止重复点击
-        if (button.hasClass('deleting')) {
-            return;
-        }
-
-        // 添加加载状态
-        button.addClass('deleting opacity-75');
-        button.text('删除中...');
-
-        // 构建删除API URL
-        var deleteApiUrl = baseUrl + deleteApiPath;
-
-        // 发送删除请求
-        $.ajax({
-            url: deleteApiUrl,
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-                api_id: apiId
-            }),
-            xhrFields: {
-                withCredentials: true
-            },
-            beforeSend: function(xhr, settings) {
-                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                if (csrfToken) {
-                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                }
-            },
-            success: function(response) {
-                // 删除成功，移除对应的表格行
-                button.closest('tr').fadeOut(300, function() {
-                    $(this).remove();
-
-                    // 检查是否还有数据行，如果没有则显示"无数据"提示
-                    var tableBody = $('#results table tbody');
-                    if (tableBody.find('tr').length === 0) {
-                        tableBody.append('<tr><td colspan="12" class="px-6 py-4 text-center text-sm text-gray-500">暂无数据</td></tr>');
-                    }
-                });
-
-                alert('接口删除成功');
-            },
-            error: function(xhr, status, error) {
-                // 恢复按钮状态
-                button.removeClass('deleting opacity-75');
-                button.text('删除');
-
-                console.error('删除接口失败:', error);
-                alert('删除接口失败: ' + (xhr.responseJSON?.message || '请重试'));
-            }
-        });
-    });
-    function createPublishButton(apiId, isPublished) {
-        var buttonClass = isPublished ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
-        var buttonText = isPublished ? '已发布' : '未发布';
-        var buttonId = 'publish_btn_' + apiId;
-
-        return '<button id="' + buttonId + '" data-api-id="' + apiId + '" data-status="' + isPublished + '" class="publish-btn ' + buttonClass + ' text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">' + buttonText + '</button>';
-    }
-        // 添加发布按钮点击事件监听器
-    $(document).on('click', '.publish-btn', function() {
-        var button = $(this);
-        var apiId = button.data('api-id');
-        var currentStatus = button.data('status');
-        var newStatus = !currentStatus;  // 切换状态
-
-        // 防止重复点击
-        if (button.hasClass('updating')) {
-            return;
-        }
-
-        // 添加加载状态
-        button.addClass('updating opacity-75');
-        button.text('处理中...');
-
-        // 构建API URL（假设有一个切换发布状态的API）
-        var togglePublishUrl = baseUrl + updateApiPath;
-
-        // 发送请求切换发布状态
-        $.ajax({
-            url: togglePublishUrl,
-            type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-                api_id: apiId,
-                publish: newStatus
-            }),
-            xhrFields: {
-                withCredentials: true
-            },
-            beforeSend: function(xhr, settings) {
-                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                if (csrfToken) {
-                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                }
-            },
-            success: function(response) {
-                // 成功后更新按钮状态
-                button.removeClass('bg-red-500 bg-green-500 updating opacity-75');
-                button.addClass(newStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
-                button.text(newStatus ? '已发布' : '未发布');
-                button.data('status', newStatus);
-                alert('发布状态更新成功')
-            },
-            error: function(xhr, status, error) {
-                // 失败时恢复原状态
-                button.removeClass('updating opacity-75');
-                button.text(currentStatus ? '已发布' : '未发布');
-                button.removeClass('bg-red-500 bg-green-500');
-                button.addClass(currentStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
-
-                console.error('发布状态更新失败:', error);
-                alert('发布状态更新失败，请重试');
-            }
-        });
+    // 显示编辑弹窗
+    $('#editModal').show();
 });
+
+// 关闭编辑弹窗
+$('.close-edit').click(function() {
+    $('#editModal').hide();
+});
+
+// 确定修改按钮点击事件
+$('#confirm_edit').click(function() {
+    var editApiUrl = baseUrl + updateApiPath;
+    var apiId = $('#edit_api_id').val();
+
+    var editData = {
+        api_id: parseInt(apiId),
+        api_name: $('#edit_api_name').val(),
+        api_url: $('#edit_url').val(),
+        api_path: $('#edit_api_path').val(),
+        api_method: $('#edit_method').val(),
+        api_header: $('#edit_headers').val(),
+        api_body: $('#edit_body').val(),
+        api_desc: $('#edit_annotation').val()
+    };
+
+    $.ajax({
+        url: editApiUrl,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(editData),
+        xhrFields: {
+            withCredentials: true
+        },
+        beforeSend: function(xhr, settings) {
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (csrfToken) {
+                xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            }
+        },
+        success: function(response) {
+            // 更新表格中的数据显示
+            var row = $(`.edit-btn[data-api-id="${apiId}"]`).closest('tr');
+            row.children().eq(2).text(editData.api_name); // 接口名称
+            row.children().eq(3).text(editData.api_url);  // 域名
+            row.children().eq(4).text(editData.api_path); // 接口路径
+            row.children().eq(5).text(editData.api_method); // 请求方式
+            row.children().eq(6).text(editData.api_header); // 请求头
+            row.children().eq(7).text(editData.api_body);   // 请求体
+            row.children().eq(8).text(editData.api_desc);   // 注释
+
+            $('#editModal').hide();
+            alert('接口修改成功');
+        },
+        error: function(xhr, status, error) {
+            console.error('修改接口失败:', error);
+            alert('修改接口失败: ' + (xhr.responseJSON?.message || '请重试'));
+        }
+    });
+});
+
+// 点击弹窗外区域关闭弹窗
+$(window).click(function(event) {
+    if (event.target.id == 'editModal') {
+        $('#editModal').hide();
+    }
+});
+
+// 修改删除按钮创建函数
+function createDeleteButton(apiId) {
+    return '<button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" data-api-id="' + apiId + '">删除</button>';
+}
+
+// 添加删除按钮点击事件监听器
+$(document).on('click', '.delete-btn', function() {
+    var button = $(this);
+    var apiId = button.data('api-id');
+
+    // 确认删除操作
+    if (!confirm('确定要删除这个接口吗？此操作不可撤销。')) {
+        return;
+    }
+
+    // 防止重复点击
+    if (button.hasClass('deleting')) {
+        return;
+    }
+
+    // 添加加载状态
+    button.addClass('deleting opacity-75');
+    button.text('删除中...');
+
+    // 构建删除API URL
+    var deleteApiUrl = baseUrl + deleteApiPath;
+
+    // 发送删除请求
+    $.ajax({
+        url: deleteApiUrl,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+            api_id: apiId
+        }),
+        xhrFields: {
+            withCredentials: true
+        },
+        beforeSend: function(xhr, settings) {
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (csrfToken) {
+                xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            }
+        },
+        success: function(response) {
+            // 删除成功，移除对应的表格行
+            button.closest('tr').fadeOut(300, function() {
+                $(this).remove();
+
+                // 检查是否还有数据行，如果没有则显示"无数据"提示
+                var tableBody = $('#results table tbody');
+                if (tableBody.find('tr').length === 0) {
+                    tableBody.append('<tr><td colspan="12" class="px-6 py-4 text-center text-sm text-gray-500">暂无数据</td></tr>');
+                }
+            });
+
+            alert('接口删除成功');
+        },
+        error: function(xhr, status, error) {
+            // 恢复按钮状态
+            button.removeClass('deleting opacity-75');
+            button.text('删除');
+
+            console.error('删除接口失败:', error);
+            alert('删除接口失败: ' + (xhr.responseJSON?.message || '请重试'));
+        }
+    });
+});
+
+function createPublishButton(apiId, isPublished) {
+    var buttonClass = isPublished ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+    var buttonText = isPublished ? '已发布' : '未发布';
+    var buttonId = 'publish_btn_' + apiId;
+
+    return '<button id="' + buttonId + '" data-api-id="' + apiId + '" data-status="' + isPublished + '" class="publish-btn ' + buttonClass + ' text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">' + buttonText + '</button>';
+}
+// 添加发布按钮点击事件监听器
+$(document).on('click', '.publish-btn', function() {
+    var button = $(this);
+    var apiId = button.data('api-id');
+    var currentStatus = button.data('status');
+    var newStatus = !currentStatus;  // 切换状态
+
+    // 防止重复点击
+    if (button.hasClass('updating')) {
+        return;
+    }
+
+    // 添加加载状态
+    button.addClass('updating opacity-75');
+    button.text('处理中...');
+
+    // 构建API URL（假设有一个切换发布状态的API）
+    var togglePublishUrl = baseUrl + updateApiPath;
+
+    // 发送请求切换发布状态
+    $.ajax({
+        url: togglePublishUrl,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+            api_id: apiId,
+            publish: newStatus
+        }),
+        xhrFields: {
+            withCredentials: true
+        },
+        beforeSend: function(xhr, settings) {
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (csrfToken) {
+                xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            }
+        },
+        success: function(response) {
+            // 成功后更新按钮状态
+            button.removeClass('bg-red-500 bg-green-500 updating opacity-75');
+            button.addClass(newStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+            button.text(newStatus ? '已发布' : '未发布');
+            button.data('status', newStatus);
+            alert('发布状态更新成功')
+        },
+        error: function(xhr, status, error) {
+            // 失败时恢复原状态
+            button.removeClass('updating opacity-75');
+            button.text(currentStatus ? '已发布' : '未发布');
+            button.removeClass('bg-red-500 bg-green-500');
+            button.addClass(currentStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+
+            console.error('发布状态更新失败:', error);
+            alert('发布状态更新失败，请重试');
+        }
+    });
+});
+
+
 </script>
 
 </html>
