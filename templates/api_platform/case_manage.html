@@ -396,6 +396,47 @@
         </div>
     </div>
 
+    <!-- 用例测试半屏弹窗 -->
+    <div id="caseTestModal" class="modal" style="z-index: 1002;">
+        <div class="bottom-sheet-content" style="height: 70vh; max-height: 70vh;">
+            <span class="close-case-test" style="position: absolute; top: 1rem; right: 1.5rem; color: #9ca3af; font-size: 2rem; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">用例测试</h2>
+
+            <div class="mb-4 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                <p class="text-sm text-blue-700"><strong>用例 ID:</strong> <span id="test_case_id"></span></p>
+                <p class="text-sm text-blue-700"><strong>用例名称:</strong> <span id="test_case_name"></span></p>
+            </div>
+
+            <div class="mb-4">
+                <label for="test_case_environment" class="block text-sm font-medium text-gray-700 mb-2">选择测试环境</label>
+                <select id="test_case_environment" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="1">测试环境</option>
+                    <option value="2">线上环境</option>
+                    <option value="3">开发环境</option>
+                </select>
+            </div>
+
+            <div class="mb-4 flex gap-3">
+                <button id="start_case_test_btn" class="bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center gap-2">
+                    <i class="fas fa-play"></i> 开始测试
+                </button>
+                <button id="close_case_test_btn" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
+                    关闭
+                </button>
+            </div>
+
+            <div id="case_test_result_container" class="border border-gray-300 rounded-md p-4 bg-gray-50 min-h-[300px] max-h-[calc(70vh-250px)] overflow-y-auto">
+                <div id="case_test_loading_indicator" class="hidden flex flex-col items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+                    <p class="text-gray-600">正在测试中，请稍候...</p>
+                </div>
+                <div id="case_test_result_content">
+                    <p class="text-gray-500 text-center">点击"开始测试"按钮执行用例测试</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container mx-auto py-4 px-4">
         <button id="create_case_btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mb-2">创建用例</button>
 
@@ -499,6 +540,7 @@ var getUsingApiPath = "query_using_api/";
 var postUsingApiPath = "create_using_api/";
 var putUsingApiPath = "update_using_api/";
 var deleteUsingApiPath = "delete_using_api/";
+var runTestPath = "run_test/";
 
 var queryApiPath = "query_api/";
 
@@ -548,6 +590,11 @@ $(document).ready(function () {
         $("#apiDetailModal").css("display", "none");
     });
 
+    // 关闭用例测试弹窗
+    $(".close-case-test, #close_case_test_btn").click(function () {
+        $("#caseTestModal").css("display", "none");
+    });
+
     // 点击"添加 API"按钮打开 API 选择弹窗
     $("#add_api_in_create").click(function() {
         loadApiListForSelection();
@@ -571,8 +618,109 @@ $(document).ready(function () {
             $('#' + event.target.id).hide();
         } else if (event.target.id == 'selectApiListModal') {
             $('#selectApiListModal').hide();
+        } else if (event.target.id == 'caseTestModal') {
+            $('#caseTestModal').hide();
         }
     });
+
+    // 开始用例测试按钮点击事件
+    $("#start_case_test_btn").click(function() {
+        var caseId = $("#test_case_id").text();
+        if (!caseId) {
+            alert('请先选择要测试的用例');
+            return;
+        }
+
+        var environment = $("#test_case_environment").val();
+        if (!environment) {
+            alert('请选择测试环境');
+            return;
+        }
+
+        // 显示加载动画
+        $("#case_test_loading_indicator").removeClass("hidden");
+        $("#case_test_result_content").empty();
+        $("#start_case_test_btn").prop("disabled", true).addClass("opacity-50");
+
+        // 发送测试请求
+        $.ajax({
+            url: baseUrl + runTestPath,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                type: "case",
+                id: parseInt(caseId),
+                environment: parseInt(environment)
+            }),
+            xhrFields: {
+                withCredentials: true
+            },
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function(response) {
+                // 隐藏加载动画
+                $("#case_test_loading_indicator").addClass("hidden");
+                $("#start_case_test_btn").prop("disabled", false).removeClass("opacity-50");
+
+                // 显示测试结果
+                var resultHtml = '<div class="space-y-4">';
+                resultHtml += '<div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">';
+                resultHtml += '<p class="text-green-700 font-semibold"><i class="fas fa-check-circle"></i> 用例测试成功</p>';
+                resultHtml += '</div>';
+
+                resultHtml += '<div class="bg-white border border-gray-300 rounded p-3">';
+                resultHtml += '<p class="text-sm font-semibold text-gray-700 mb-2">返回结果：</p>';
+                resultHtml += '<pre class="bg-gray-100 p-3 rounded overflow-x-auto text-sm">' + JSON.stringify(response.data, null, 2) + '</pre>';
+                resultHtml += '</div>';
+                resultHtml += '</div>';
+
+                $("#case_test_result_content").html(resultHtml);
+            },
+            error: function(xhr, status, error) {
+                // 隐藏加载动画
+                $("#case_test_loading_indicator").addClass("hidden");
+                $("#start_case_test_btn").prop("disabled", false).removeClass("opacity-50");
+
+                // 显示错误信息
+                var errorHtml = '<div class="bg-red-50 border-l-4 border-red-500 p-3 rounded">';
+                errorHtml += '<p class="text-red-700 font-semibold"><i class="fas fa-times-circle"></i> 用例测试失败</p>';
+                errorHtml += '</div>';
+
+                errorHtml += '<div class="bg-white border border-gray-300 rounded p-3 mt-3">';
+                errorHtml += '<p class="text-sm font-semibold text-gray-700 mb-2">错误信息：</p>';
+                errorHtml += '<pre class="bg-gray-100 p-3 rounded overflow-x-auto text-sm text-red-600">' + (xhr.responseJSON?.message || error || '未知错误') + '</pre>';
+                errorHtml += '</div>';
+
+                $("#case_test_result_content").html(errorHtml);
+            }
+        });
+    });
+
+    // 添加用例测试按钮点击事件监听器
+    $(document).on('click', '.test-case-btn', function() {
+        var caseId = $(this).data('case-id');
+        var caseName = $(this).data('case-name');
+
+        // 设置测试弹窗中的用例信息
+        $("#test_case_id").text(caseId);
+        $("#test_case_name").text(caseName);
+
+        // 重置环境选择为默认值（测试环境）
+        $("#test_case_environment").val("1");
+
+        // 重置测试结果区域
+        $("#case_test_result_content").html('<p class="text-gray-500 text-center">点击"开始测试"按钮执行用例测试</p>');
+        $("#case_test_loading_indicator").addClass("hidden");
+        $("#start_case_test_btn").prop("disabled", false).removeClass("opacity-50");
+
+        // 显示测试弹窗
+        $("#caseTestModal").css("display", "block");
+    });
+
 
     // 确认创建用例
     $("#confirm_create_case").click(function () {
@@ -737,7 +885,7 @@ $(document).ready(function () {
             url: queryUrl,
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({page: 1, page_size: 100}),
+            data: JSON.stringify({page: 1, page_size: 100, query_type: 'query'}),
             xhrFields: {
                 withCredentials: true
             },
@@ -759,7 +907,6 @@ $(document).ready(function () {
             }
         });
     }
-
     // 选择 API 时自动填充请求方式
     $('#select_api_id').change(function() {
         var selectedOption = $(this).find('option:selected');
@@ -776,7 +923,7 @@ $(document).ready(function () {
             url: queryUrl,
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({page: 1, page_size: 100}),
+            data: JSON.stringify({page: 1, page_size: 100, query_type: 'using'}),
             xhrFields: {
                 withCredentials: true
             },
@@ -810,7 +957,6 @@ $(document).ready(function () {
             }
         });
     }
-
     // 选择 API 按钮点击事件
     $(document).on('click', '.select-api-btn', function() {
         var apiId = $(this).data('api-id');
@@ -858,7 +1004,7 @@ $(document).ready(function () {
             url: queryUrl,
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({page: 1, page_size: 100}),
+            data: JSON.stringify({page: 1, page_size: 100, query_type: 'using'}),
             xhrFields: {
                 withCredentials: true
             },
@@ -1147,6 +1293,7 @@ $(document).ready(function () {
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + apiCount + "</td>");
                         row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (caseItem.annotation || '') + "</td>");
                         var actions = '<td class="px-6 py-4 whitespace-nowrap text-sm">';
+                        actions += '<button class="test-case-btn bg-purple-500 hover:bg-purple-600 text-white py-1 px-2 rounded text-xs mr-2" data-case-id="' + (caseItem.id || '') + '" data-case-name="' + (caseItem.name || '') + '">测试</button>';
                         actions += '<button class="edit-case-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-2 rounded text-xs mr-2" data-case-id="' + (caseItem.id || '') + '" data-case-name="' + (caseItem.name || '') + '" data-case-hoster="' + (caseItem.hoster_name || '') + '" data-case-publish="' + (caseItem.publish ? '1' : '0') + '" data-case-annotation="' + (caseItem.annotation || '') + '" data-api-count="' + apiCount + '">编辑</button>';
                         actions += '<button class="delete-case-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs">删除</button>';
                         actions += '</td>';
@@ -1614,7 +1761,7 @@ $(document).ready(function () {
             url: queryUrl,
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({page: 1, page_size: 100}),
+            data: JSON.stringify({page: 1, page_size: 100, query_type: 'using'}),
             xhrFields: {
                 withCredentials: true
             },
@@ -1670,7 +1817,7 @@ $(document).ready(function () {
             url: queryUrl,
             type: "POST",
             contentType: "application/json",
-            data: JSON.stringify({page: 1, page_size: 100}),
+            data: JSON.stringify({page: 1, page_size: 100, query_type: 'using'}),
             xhrFields: {
                 withCredentials: true
             },

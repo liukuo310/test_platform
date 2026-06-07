@@ -15,8 +15,8 @@ class Api(models.Model):
     api_path = models.CharField(max_length=60, verbose_name="接口地址", null=True)
     headers = models.CharField(max_length=60, verbose_name="请求头", null=True)
     method = models.CharField(max_length=60, verbose_name="请求方式", null=True)
-    body = models.CharField(max_length=60, verbose_name="请求体", null=True)
-    params = models.CharField(max_length=60, verbose_name="请求参数", null=True)
+    body = models.JSONField(verbose_name="请求体", null=True, blank=True, default=dict)
+    params = models.JSONField(verbose_name="请求参数", null=True, blank=True, default=dict)
     desc = models.CharField(max_length=60, verbose_name="接口注释", null=True)
     publish = models.BooleanField(verbose_name="接口是否发布", null=True)
     def to_dict(self):
@@ -39,9 +39,9 @@ class ApiUsing(models.Model):
     case_id = models.ForeignKey("Case", on_delete=models.CASCADE)
     hoster_name = models.CharField(max_length=60, verbose_name="作者名称")
     api_id = models.CharField(max_length=60, verbose_name="接口ID")
-    params = models.CharField(max_length=60, verbose_name="请求参数")
+    params = models.JSONField(verbose_name="请求参数", null=True, blank=True, default=dict)
     headers = models.CharField(max_length=60, verbose_name="请求头")
-    body = models.CharField(max_length=60, verbose_name="请求体")
+    body = models.JSONField(verbose_name="请求体", null=True, blank=True, default=dict)
     method = models.CharField(max_length=60, verbose_name="请求方式")
     assert_result = models.CharField(max_length=60, verbose_name="预期结果")
     globla_values = models.CharField(max_length=60, verbose_name="全局变量")
@@ -52,7 +52,7 @@ class Case(models.Model):
     name = models.CharField(max_length=60, verbose_name="用例名称")
     hoster_name = models.CharField(max_length=60, verbose_name="作者名称")
     publish = models.BooleanField(verbose_name="用例是否发布")
-    api_ids = models.JSONField(verbose_name="接口ID组合")
+    api_ids = models.JSONField(verbose_name="接口ID组合", default=list, blank=True)
     annotation = models.CharField(max_length=60, verbose_name="用例注释")
     def to_dict(self):
         return {

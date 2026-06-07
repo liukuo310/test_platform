@@ -105,17 +105,33 @@ def update_api(request):
     data = json.loads(request.body)
     print(f"传递的参数是:{data}")
     api_id = data.get("api_id")
+    update_type = data.get("update_type")
+    api_name = data.get("api_name")
+    api_url = data.get("api_url")
+    api_path = data.get("api_path")
+    api_method = data.get("api_method", "GET")
+    api_header = data.get("api_header")
+    api_body = data.get("api_body")
+    api_params = data.get("api_params")
+    api_desc = data.get("api_desc")
     if not api_id:
         return JsonResponse({'message': 'Invalid API ID'}, status=400)
     try:
         api_data = Api.objects.get(id=api_id)
     except Api.DoesNotExist:
         return JsonResponse({'message': 'API not found'}, status=404)
-    for key, value in data.items():
-        if key == "api_id":
-            continue
-        if hasattr(api_data, key):
-            setattr(api_data, key, value)
+    if update_type:  # 传发布状态时仅更新发布状态
+        api_data.publish = not api_data.publish
+        api_data.save()
+        return JsonResponse({'message': "Update API successfully", "data": api_data.to_dict()}, status=200)
+    api_data.name = api_name
+    api_data.base_url = api_url
+    api_data.api_path = api_path
+    api_data.method = api_method
+    api_data.headers = api_header
+    api_data.body = api_body
+    api_data.params = api_params
+    api_data.desc = api_desc
     api_data.save()
     return JsonResponse({'message': "Update API successfully", "data": api_data.to_dict()}, status=200)
 
@@ -142,6 +158,11 @@ def get_api(request):
         if key in [field.name for field in Api._meta.fields]:
             field_name = f"{key}__icontains"
             query &= Q(**{field_name: value})
+    query_type = query_params.get("query_type")
+    if query_type == "using":
+        print("查询发布的接口")
+        apis = apis.filter(publish=True)
+        print(apis)
     apis_query = apis.filter(query).order_by('id')
     if not apis_query:
         return JsonResponse({'message': 'API not found'}, status=404)
@@ -197,10 +218,10 @@ def update_case(request):
     try:
         print(f"传递的参数是:{request.body}")
         data = json.loads(request.body)
-        update_tyoe = data.get("update_type")
+        update_type = data.get("update_type")
         case_id = data.get("case_id")
         case = Case.objects.get(id=case_id)
-        if update_tyoe == "publish":
+        if update_type == "publish":
             case.publish = data.get("case_publish")
             case.save()
             return JsonResponse({'message': "Update Case successfully"}, status=200)
@@ -524,6 +545,13 @@ def run_case(case_id, en):
     return result_list
 
 def test_case(request):
-    """测试接口"""
+    """外部测试接口"""
     print("走到测试接口了")
-    return JsonResponse({'message': '测试接口返回成功'}, status=200)
+    body = request.body
+    print(request.body)
+    if not body:
+        return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+    data = json.loads(body)
+    header = request.headers
+    print(header)
+    return JsonResponse({'message': '测试接口返回成功', 'data': data}, status=200)

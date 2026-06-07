@@ -1017,7 +1017,8 @@ $(document).on('click', '.publish-btn', function() {
         contentType: "application/json",
         data: JSON.stringify({
             api_id: apiId,
-            publish: newStatus
+            publish: newStatus,
+            update_type: 'publish'
         }),
         xhrFields: {
             withCredentials: true
