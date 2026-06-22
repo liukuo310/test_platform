@@ -5,10 +5,11 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.generic import View
 from django.db.models import Count, Q
-from api_platform.models import Api, Case, ApiUsing
+from api_platform.models import Api, Case, ApiUsing, Task
 from plat.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.conf import settings
 
 
 def api_main_view(request):
@@ -216,7 +217,6 @@ def delete_api(request):
 def update_case(request):
     """修改用例"""
     try:
-        print(f"传递的参数是:{request.body}")
         data = json.loads(request.body)
         update_type = data.get("update_type")
         case_id = data.get("case_id")
@@ -235,45 +235,38 @@ def update_case(request):
         old_api_using_id_list = [api.id for api in old_api_list]
         # 更新用例数据
         case.name = data.get("case_name")
-        case.hoster_name = data.get("case_hoster")
         case.publish = data.get("case_publish")
         api_using_ids_list = data.get("api_using_ids")
         case.annotation = data.get("case_desc")
-
-        if not new_api_list:  # 没有任何值时认为全删除
-            for api_using_old in old_api_list:
-                api_using_old.delete()
-        else:
-            for index, new_api_data in enumerate(new_api_list):
-                print(f"新数据是:{new_api_data}")
-                api_using_id = new_api_data.get("api_using_id", 0)
-                api_id = new_api_data.get("api_id")
-                if api_using_id==0:  # 0为没有，没有则创建
-                    new_api_using = ApiUsing.objects.create(
-                        case_id=case,
-                        api_id=api_id,
-                        hoster_name=user_name,
-                        params=new_api_data.get("params", ""),
-                        headers=new_api_data.get("headers", ""),
-                        body=new_api_data.get("body", ""),
-                        method=new_api_data.get("method", "GET"),
-                        assert_result=new_api_data.get("assert_result", ""),
-                        globla_values=new_api_data.get("globla_values", ""),
-                    )
-                    api_using_ids_list[index] = new_api_using.id
-                else:  # 存在则更新
-                    api_using_old = ApiUsing.objects.get(id=api_using_id)
-                    for key, value in new_api_data.items():
-                        if key == "api_id" or key == "api_using_id":
-                            continue
-                        if hasattr(api_using_old, key):
-                            setattr(api_using_old, key, value)
-                    api_using_old.save()
-                    old_api_using_id_list.remove(api_using_id)
-            case.api_ids = api_using_ids_list
-            case.save()
-        for old_api_using_id in old_api_using_id_list:  # 更新时删除之前存在的接口数据
+        for index, new_api_data in enumerate(new_api_list):
+            api_using_id = new_api_data.get("api_using_id", 0)
+            api_id = new_api_data.get("api_id")
+            if api_using_id==0:  # 0为没有，没有则创建
+                new_api_using = ApiUsing.objects.create(
+                    case_id=case,
+                    api_id=api_id,
+                    hoster_name=user_name,
+                    params=new_api_data.get("params", ""),
+                    headers=new_api_data.get("headers", ""),
+                    body=new_api_data.get("body", ""),
+                    method=new_api_data.get("method", "GET"),
+                    assert_result=new_api_data.get("assert_result", ""),
+                    globla_values=new_api_data.get("globla_values", ""),
+                )
+                api_using_ids_list[index] = new_api_using.id
+            else:  # 存在则更新
+                api_using_old = ApiUsing.objects.get(id=api_using_id)
+                for key, value in new_api_data.items():
+                    if key == "api_id" or key == "api_using_id":
+                        continue
+                    if hasattr(api_using_old, key):
+                        setattr(api_using_old, key, value)
+                api_using_old.save()
+                old_api_using_id_list.remove(api_using_id)
+        for old_api_using_id in old_api_using_id_list:  # 更新需要删除的接口数据
             ApiUsing.objects.get(id=old_api_using_id).delete()
+        case.api_ids = api_using_ids_list
+        case.save()
         return JsonResponse({'message': 'Update Case successfully'}, status=200)
     except Case.DoesNotExist:
         return JsonResponse({'message': 'Case not found'}, status=404)
@@ -465,7 +458,14 @@ def query_using_api(request):
     """查询接口关联信息"""
     try:
         data = json.loads(request.body)
-        return JsonResponse({'message': '接口关联信息查询成功', 'data': list(ApiUsing.objects.filter(case_id=data.get("case_id")).values())}, status=200)
+        response_data = []
+        for api_using in ApiUsing.objects.filter(case_id=data.get("case_id")):
+            api_response_data = api_using.to_dict()
+            Api_data = Api.objects.get(id=api_using.api_id)
+            api_response_data["api_path"] = Api_data.api_path
+            api_response_data["api_name"] = Api_data.name
+            response_data.append(api_response_data)
+        return JsonResponse({'message': '接口关联信息查询成功', 'data': response_data}, status=200)
     except json.JSONDecodeError:
         return JsonResponse({'message': 'Invalid JSON format'}, status=400)
     except User.DoesNotExist:
@@ -479,13 +479,7 @@ def run_test(request):
         data = json.loads(request.body)
         test_type = data.get("type")
         en_re = data.get("environment")
-        print(test_type)
-        print(en_re)
-        en_map = {
-            "1": "http://127.0.0.1:8000/",
-            "2": "http://127.0.0.1:8000/",
-            "3": "http://127.0.0.1:8000/",
-        }
+        en_map = settings.en_map
         en = en_map.get(en_re, "http://127.0.0.1:8000/")  # 默认在测试环境运行
         if test_type == "case":
             result = run_case(data.get("id"), en)
@@ -509,7 +503,7 @@ def run_api(api_type, api_id, en):
     import requests
     if api_type == "api_using":  # 使用接口单独调试
         api_using = ApiUsing.objects.get(id=api_id)
-        api = Api.objects.get(case_id=api_using.case_id)
+        api = Api.objects.get(id=api_using.api_id)
         url = en + api.api_path
         headers = api_using.headers
         method = api_using.method
@@ -537,21 +531,166 @@ def run_api(api_type, api_id, en):
 
 def run_case(case_id, en):
     """运行用例"""
-    all_apiusing = ApiUsing.objects.filter(case_id=case_id)
+    all_apiusing = list(ApiUsing.objects.filter(case_id=case_id))
     result_list = []
     for apiusing_data in all_apiusing:
         result = run_api("api_using", apiusing_data.id, en)
         result_list.append(result)
     return result_list
 
+def create_task(request):
+    """创建持续集成任务"""
+    try:
+        data = json.loads(request.body)
+        print( data)
+        name = data.get("name")
+        if not name:
+            return JsonResponse({'message': '创建任务需要任务名称'}, status=400)
+        Task.objects.create(
+            name=name,
+            task_model=data.get("task_model"),
+            task_tag=data.get("task_tag"),
+            emails=data.get("emails"),
+            runtime=data.get("runtime"),
+            publish=False  # 创建之后默认不发布
+        )
+        return JsonResponse({'message': '持续集成任务创建成功'}, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
+
+def update_task(request):
+    """更新持续集成任务"""
+    try:
+        data = json.loads(request.body)
+        task_id = data.get("task_id")
+        if not task_id:
+            return JsonResponse({'message': '更新任务需要任务ID'}, status=400)
+        task = Task.objects.get(id=task_id)
+        update_type = data.get("update_type")
+        if update_type == "publish":
+            print("修改发布")
+            print(task.publish)
+            task.publish = data.get("publish")
+            task.save()
+            print("修改成功")
+            return JsonResponse({'message': '持续集成任务发布成功'}, status=200)
+        task.name = data.get("name")
+        task.task_tag = data.get("task_tag")
+        task.task_model = data.get("task_model")
+        task.emails = data.get("emails")
+        task.runtime = data.get("runtime")
+        task.save()
+        return JsonResponse({'message': '持续集成任务更新成功'}, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
+
+def query_task(request):
+    """查询持续集成任务"""
+    try:
+        data = json.loads(request.body)
+        print( data)
+        page = int(data.get("page"))
+        page_size = int(data.get("page_size"))
+        tasks = Task.objects.all()
+        query = Q()
+        for key, value in data.items():
+            if not value:
+                continue
+            if key in ("page", "page_size"):
+                 continue
+            if key in [field.name for field in Task._meta.fields]:
+                field_name = f"{key}__icontains"
+                query &= Q(**{field_name: value})
+        tasks_qs = tasks.filter(query).order_by("-id")
+        if not tasks_qs:
+            return JsonResponse({'message': '没有查询到数据'}, status=200)
+        paginator = Paginator(tasks_qs, page_size)
+        try:
+            paginated_tasks = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_tasks = paginator.page(1)
+        except EmptyPage:
+            paginated_tasks = paginator.page(paginator.num_pages)
+            page = paginator.num_pages
+        data_list = []
+        for task in paginated_tasks:
+            task_dict = task.to_dict()
+            task_dict['id'] = task.id
+            data_list.append(task_dict)
+        data = {
+            "data": data_list,
+            "pagination": {
+                "current_page": page,
+                "page_size": page_size,
+                "total_count": paginator.count,
+                "total_pages": paginator.num_pages,
+                "has_next": paginated_tasks.has_next(),
+                "has_previous": paginated_tasks.has_previous(),
+                "next_page": paginated_tasks.next_page_number() if paginated_tasks.has_next() else None,
+                "previous_page": paginated_tasks.previous_page_number() if paginated_tasks.has_previous() else None
+            }
+        }
+        return JsonResponse(data, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
+
+def delete_task(request):
+    """删除持续集成任务"""
+    try:
+        data = json.loads(request.body)
+        task_id = data.get("task_id")
+        if not task_id:
+            return JsonResponse({'message': '删除任务需要任务ID'}, status=400)
+        Task.objects.get(id=task_id).delete()
+        return JsonResponse({'message': '持续集成任务删除成功'}, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
+
+def run_task(request):
+    """持续集成接口"""
+    try:
+        data = json.loads(request.body)
+        test_model = data.get("task_model")
+        test_tag = data.get("task_tag")
+        run_case_list = Case.objects.filter(publish=True)
+        if test_model:
+            run_case_list = run_case_list.filter(model=test_model)
+        if test_tag:
+            run_case_list = run_case_list.filter(tag=test_tag)
+        run_case_list = list(run_case_list)
+        run_result_list = []
+        for case in run_case_list:
+            run_result = run_case(case.id, "http://127.0.0.1:8000/")
+            run_result_list.append(run_result)
+        return JsonResponse({'message': '用例运行成功', 'data': run_result_list}, status=200)
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'message': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Internal server error: {str(e)}'}, status=500)
+
 def test_case(request):
     """外部测试接口"""
-    print("走到测试接口了")
     body = request.body
-    print(request.body)
     if not body:
         return JsonResponse({'message': 'Invalid JSON format'}, status=400)
     data = json.loads(body)
     header = request.headers
-    print(header)
     return JsonResponse({'message': '测试接口返回成功', 'data': data}, status=200)

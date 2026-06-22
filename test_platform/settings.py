@@ -175,3 +175,9 @@ CACHES = {
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 
+en_map = {
+            "1": "http://127.0.0.1:8000/",
+            "2": "http://127.0.0.1:8000/",
+            "3": "http://127.0.0.1:8000/",
+        }
+

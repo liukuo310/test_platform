@@ -1566,7 +1566,7 @@ $(document).ready(function () {
         // 构造提交数据
 
         var apiUsingIdsList = currentApiList.map(function(api) {
-            return api.api_using_id;
+            return api.api_using_id || 0;
         });
 
         var postData = {

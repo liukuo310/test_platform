@@ -22,6 +22,12 @@ urlpatterns = [
     path("query_case/", views.get_case, name="get_case"),
     path("delete_case/", views.delete_case, name="delete_case"),
 
+    path("create_task/", views.create_task, name="create_cidi"),
+    path("update_task/", views.update_task, name="update_task"),
+    path("query_task/", views.query_task, name="query_task"),
+    path("delete_task/", views.delete_task, name="delete_task"),
+
+    path("run_task/", views.run_task, name="run_task"),
     path("run_test/", views.run_test, name="run_test"),
 
     path("test/", views.test_case, name="test_case")  # 平台测试接口使用

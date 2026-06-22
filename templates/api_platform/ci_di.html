@@ -1,10 +1,715 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>ci_di</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>持续集成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .close {
+            color: #9ca3af;
+            float: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #1f2937;
+        }
+
+        .close-edit {
+            color: #9ca3af;
+            float: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-edit:hover {
+            color: #1f2937;
+        }
+
+        .bottom-sheet-content {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fefefe;
+            border-radius: 1rem 1rem 0 0;
+            padding: 2rem;
+            height: 50vh;
+            max-height: 50vh;
+            overflow-y: auto;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.3s ease-out;
+            z-index: 1003;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
-<body>
-    <p>持续集成界面</p>
+
+<body class="bg-gray-100 font-sans">
+
+    <!-- 创建任务半屏弹窗 -->
+    <div id="createModal" class="modal">
+        <div class="bottom-sheet-content">
+            <span class="close" style="position: absolute; top: 1rem; right: 1.5rem; font-size: 2rem;">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">创建持续集成任务</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="mb-3">
+                    <label for="create_name" class="block text-sm font-medium text-gray-700">任务名称</label>
+                    <input type="text" id="create_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-3">
+                    <label for="create_models" class="block text-sm font-medium text-gray-700">模块</label>
+                    <input type="text" id="create_models" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-3">
+                    <label for="create_tag" class="block text-sm font-medium text-gray-700">标签</label>
+                    <input type="text" id="create_tag" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-3">
+                    <label for="create_emails" class="block text-sm font-medium text-gray-700">邮箱</label>
+                    <input type="text" id="create_emails" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-3 col-span-2">
+                    <label for="create_runtime" class="block text-sm font-medium text-gray-700">运行时间</label>
+                    <input type="text" id="create_runtime" placeholder="例如: 0 2 * * * (cron表达式)" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+            <button id="confirm_create" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mt-2">确定创建</button>
+        </div>
+    </div>
+
+    <!-- 修改任务弹窗 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-edit">&times;</span>
+            <h2 class="text-xl font-bold mb-4">修改持续集成任务</h2>
+            <input type="hidden" id="edit_task_id">
+            <div class="mb-3">
+                <label for="edit_name" class="block text-sm font-medium text-gray-700">任务名称</label>
+                <input type="text" id="edit_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-3">
+                <label for="edit_models" class="block text-sm font-medium text-gray-700">模块</label>
+                <input type="text" id="edit_models" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-3">
+                <label for="edit_tag" class="block text-sm font-medium text-gray-700">标签</label>
+                <input type="text" id="edit_tag" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-3">
+                <label for="edit_emails" class="block text-sm font-medium text-gray-700">邮箱</label>
+                <input type="text" id="edit_emails" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="mb-4">
+                <label for="edit_runtime" class="block text-sm font-medium text-gray-700">运行时间</label>
+                <input type="text" id="edit_runtime" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <button id="confirm_edit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">确定修改</button>
+        </div>
+    </div>
+
+    <!-- 测试弹窗 -->
+    <div id="testModal" class="modal" style="z-index: 1002;">
+        <div class="bottom-sheet-content" style="height: 60vh; max-height: 60vh;">
+            <span class="close-test" style="position: absolute; top: 1rem; right: 1.5rem; color: #9ca3af; font-size: 2rem; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">任务测试</h2>
+            <div class="mb-4 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                <p class="text-sm text-blue-700"><strong>任务名称:</strong> <span id="test_task_name"></span></p>
+                <p class="text-sm text-blue-700"><strong>模块:</strong> <span id="test_task_model"></span></p>
+                <p class="text-sm text-blue-700"><strong>标签:</strong> <span id="test_task_tag"></span></p>
+            </div>
+            <div class="mb-4 flex gap-3">
+                <button id="start_test_btn" class="bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center gap-2">
+                    <i class="fas fa-play"></i> 开始运行
+                </button>
+                <button id="close_test_btn" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
+                    关闭
+                </button>
+            </div>
+            <div class="border border-gray-300 rounded-md p-4 bg-gray-50 min-h-[200px] max-h-[calc(60vh-220px)] overflow-y-auto">
+                <div id="test_loading" class="hidden flex flex-col items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+                    <p class="text-gray-600">正在运行中，请稍候...</p>
+                </div>
+                <div id="test_result">
+                    <p class="text-gray-500 text-center">点击"开始运行"按钮执行任务测试</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主页面 -->
+    <div class="container mx-auto py-4 px-4">
+        <div class="flex gap-3 mb-4">
+            <button id="create_task_btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                <i class="fas fa-plus"></i> 创建任务
+            </button>
+        </div>
+
+        <!-- 查询区域 -->
+        <div class="bg-white p-4 rounded-md shadow-md">
+            <h2 class="text-lg font-bold mb-2">查询任务</h2>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label for="query_name" class="block text-sm font-medium text-gray-700">任务名称</label>
+                    <input type="text" id="query_name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_models" class="block text-sm font-medium text-gray-700">模块</label>
+                    <input type="text" id="query_models" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_tag" class="block text-sm font-medium text-gray-700">标签</label>
+                    <input type="text" id="query_tag" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+            <button id="query_task_btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mt-4">
+                <i class="fas fa-search"></i> 查询
+            </button>
+        </div>
+
+        <!-- 查询结果 -->
+        <div id="result_list" class="mt-4 bg-white p-4 rounded-md shadow-md">
+            <h2 class="text-lg font-bold mb-2">查询结果</h2>
+            <div id="results"></div>
+
+            <!-- 分页控件 -->
+            <div id="pagination_controls" class="mt-4 flex items-center justify-between bg-white p-4 rounded-md shadow-md hidden">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700">
+                        共 <span id="total_count" class="font-semibold">0</span> 条记录，
+                        第 <span id="current_page" class="font-semibold">1</span> 页，
+                        共 <span id="total_pages" class="font-semibold">1</span> 页
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <select id="page_size_select" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
+                        <option value="5">5条/页</option>
+                        <option value="10" selected>10条/页</option>
+                        <option value="20">20条/页</option>
+                        <option value="50">50条/页</option>
+                    </select>
+                    <div class="flex space-x-1">
+                        <button id="first_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">首页</button>
+                        <button id="prev_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
+                        <div id="page_numbers" class="flex space-x-1"></div>
+                        <button id="next_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+                        <button id="last_page" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">末页</button>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-700">跳转到</span>
+                        <input type="number" id="jump_page_input" min="1" class="w-16 border border-gray-300 rounded px-2 py-1 text-sm">
+                        <button id="jump_page_btn" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">GO</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
+
+<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+<script>
+var baseUrl = "http://127.0.0.1:8000/api_platform/";
+var createTaskPath = "create_task/";
+var updateTaskPath = "update_task/";
+var queryTaskPath = "query_task/";
+var deleteTaskPath = "delete_task/";
+var runTaskPath = "run_task/";
+
+var currentPage = 1;
+var pageSize = 10;
+var totalPage = 1;
+var totalCount = 0;
+
+$(document).ready(function () {
+
+    // ========== 创建任务 ==========
+    $("#create_task_btn").click(function () {
+        $("#createModal").css("display", "block");
+    });
+
+    $(".close").click(function () {
+        $("#createModal").css("display", "none");
+    });
+
+    $("#confirm_create").click(function () {
+        var postData = {
+            name: $("#create_name").val(),
+            task_model: $("#create_models").val(),
+            task_tag: $("#create_tag").val(),
+            emails: $("#create_emails").val(),
+            runtime: $("#create_runtime").val()
+        };
+
+        if (!postData.name) {
+            alert("任务名称不能为空");
+            return;
+        }
+
+        $.ajax({
+            url: baseUrl + createTaskPath,
+            type: "POST",
+            xhrFields: { withCredentials: true },
+            contentType: "application/json",
+            data: JSON.stringify(postData),
+            beforeSend: function(xhr) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            },
+            success: function () {
+                alert("任务创建成功");
+                $("#createModal").css("display", "none");
+                $("#create_name").val("");
+                $("#create_models").val("");
+                $("#create_tag").val("");
+                $("#create_emails").val("");
+                $("#create_runtime").val("");
+                currentPage = 1;
+                performQuery();
+            },
+            error: function (xhr) {
+                alert("创建失败: " + (xhr.responseJSON?.message || '未知错误'));
+            }
+        });
+    });
+
+    // ========== 查询任务 ==========
+    $("#query_task_btn").click(function () {
+        currentPage = 1;
+        performQuery();
+    });
+
+    $("#page_size_select").change(function() {
+        pageSize = parseInt($(this).val());
+        currentPage = 1;
+        performQuery();
+    });
+
+    $("#first_page").click(function() {
+        if (currentPage > 1) { currentPage = 1; performQuery(); }
+    });
+    $("#prev_page").click(function() {
+        if (currentPage > 1) { currentPage--; performQuery(); }
+    });
+    $("#next_page").click(function() {
+        if (currentPage < totalPage) { currentPage++; performQuery(); }
+    });
+    $("#last_page").click(function() {
+        if (currentPage < totalPage) { currentPage = totalPage; performQuery(); }
+    });
+    $("#jump_page_btn").click(function() {
+        var jumpPage = parseInt($("#jump_page_input").val());
+        if (jumpPage >= 1 && jumpPage <= totalPage && jumpPage !== currentPage) {
+            currentPage = jumpPage;
+            performQuery();
+        }
+    });
+    $("#jump_page_input").keypress(function(e) {
+        if (e.which === 13) $("#jump_page_btn").click();
+    });
+
+    // ========== 修改任务 ==========
+    $(document).on('click', '.edit-btn', function() {
+        var taskId = $(this).data('task-id');
+        var row = $(this).closest('tr');
+        $('#edit_task_id').val(taskId);
+        $('#edit_name').val(row.children().eq(1).text());
+        $('#edit_models').val(row.children().eq(2).text());
+        $('#edit_tag').val(row.children().eq(3).text());
+        $('#edit_emails').val(row.children().eq(4).text());
+        $('#edit_runtime').val(row.children().eq(5).text());
+        $('#editModal').show();
+    });
+
+    $('.close-edit').click(function() {
+        $('#editModal').hide();
+    });
+
+    $('#confirm_edit').click(function() {
+        var taskId = $('#edit_task_id').val();
+        var editData = {
+            task_id: parseInt(taskId),
+            name: $('#edit_name').val(),
+            task_model: $('#edit_models').val(),
+            task_tag: $('#edit_tag').val(),
+            emails: $('#edit_emails').val(),
+            runtime: $('#edit_runtime').val()
+        };
+
+        $.ajax({
+            url: baseUrl + updateTaskPath,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(editData),
+            xhrFields: { withCredentials: true },
+            beforeSend: function(xhr) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            },
+            success: function() {
+                $('#editModal').hide();
+                alert('任务修改成功');
+                performQuery();
+            },
+            error: function(xhr) {
+                alert('修改失败: ' + (xhr.responseJSON?.message || '请重试'));
+            }
+        });
+    });
+
+    // ========== 删除任务 ==========
+    $(document).on('click', '.delete-btn', function() {
+        var button = $(this);
+        var taskId = button.data('task-id');
+
+        if (!confirm('确定要删除这个任务吗？此操作不可撤销。')) return;
+        if (button.hasClass('deleting')) return;
+
+        button.addClass('deleting opacity-75');
+        button.text('删除中...');
+
+        $.ajax({
+            url: baseUrl + deleteTaskPath,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ task_id: taskId }),
+            xhrFields: { withCredentials: true },
+            beforeSend: function(xhr) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            },
+            success: function() {
+                button.closest('tr').fadeOut(300, function() {
+                    $(this).remove();
+                    var tableBody = $('#results table tbody');
+                    if (tableBody.find('tr').length === 0) {
+                        tableBody.append('<tr><td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">暂无数据</td></tr>');
+                    }
+                });
+                alert('任务删除成功');
+            },
+            error: function(xhr) {
+                button.removeClass('deleting opacity-75');
+                button.text('删除');
+                alert('删除失败: ' + (xhr.responseJSON?.message || '请重试'));
+            }
+        });
+    });
+
+    // ========== 发布状态切换 ==========
+    $(document).on('click', '.publish-btn', function() {
+        var button = $(this);
+        var taskId = button.data('task-id');
+        var currentStatus = button.data('status');
+        var newStatus = !currentStatus;
+
+        if (button.hasClass('updating')) return;
+        button.addClass('updating opacity-75');
+        button.text('处理中...');
+
+        $.ajax({
+            url: baseUrl + updateTaskPath,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                task_id: taskId,
+                publish: newStatus,
+                update_type: 'publish'
+            }),
+            xhrFields: { withCredentials: true },
+            beforeSend: function(xhr) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            },
+            success: function() {
+                var newStatus = !currentStatus;
+                button.removeClass('bg-red-500 bg-green-500 updating opacity-75');
+                button.addClass(newStatus ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600');
+                button.text(newStatus ? '已发布' : '未发布');
+                button.data('status', newStatus);
+                alert('发布状态更新成功');
+            },
+            error: function() {
+                button.removeClass('updating opacity-75');
+                button.text(currentStatus ? '已发布' : '未发布');
+                alert('发布状态更新失败，请重试');
+            }
+        });
+    });
+
+    // ========== 测试按钮 ==========
+    $(document).on('click', '.test-btn', function() {
+        var taskName = $(this).data('task-name');
+        var taskModel = $(this).data('task-model');
+        var taskTag = $(this).data('task-tag');
+
+        $("#test_task_name").text(taskName);
+        $("#test_task_model").text(taskModel);
+        $("#test_task_tag").text(taskTag);
+        $("#test_result").html('<p class="text-gray-500 text-center">点击"开始运行"按钮执行任务测试</p>');
+        $("#test_loading").addClass("hidden");
+        $("#start_test_btn").prop("disabled", false).removeClass("opacity-50");
+        $("#testModal").css("display", "block");
+    });
+
+    $(".close-test, #close_test_btn").click(function () {
+        $("#testModal").css("display", "none");
+    });
+
+    $("#start_test_btn").click(function() {
+        var taskModel = $("#test_task_model").text();
+        var taskTag = $("#test_task_tag").text();
+
+        $("#test_loading").removeClass("hidden");
+        $("#test_result").empty();
+        $("#start_test_btn").prop("disabled", true).addClass("opacity-50");
+
+        $.ajax({
+            url: baseUrl + runTaskPath,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                task_model: taskModel,
+                task_tag: taskTag
+            }),
+            xhrFields: { withCredentials: true },
+            beforeSend: function(xhr) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            },
+            success: function(response) {
+                $("#test_loading").addClass("hidden");
+                $("#start_test_btn").prop("disabled", false).removeClass("opacity-50");
+                var html = '<div class="bg-green-50 border-l-4 border-green-500 p-3 rounded mb-3">';
+                html += '<p class="text-green-700 font-semibold"><i class="fas fa-check-circle"></i> 运行成功</p></div>';
+                html += '<div class="bg-white border border-gray-300 rounded p-3">';
+                html += '<p class="text-sm font-semibold text-gray-700 mb-2">返回结果：</p>';
+                html += '<pre class="bg-gray-100 p-3 rounded overflow-x-auto text-sm">' + JSON.stringify(response.data, null, 2) + '</pre>';
+                html += '</div>';
+                $("#test_result").html(html);
+            },
+            error: function(xhr) {
+                $("#test_loading").addClass("hidden");
+                $("#start_test_btn").prop("disabled", false).removeClass("opacity-50");
+                var html = '<div class="bg-red-50 border-l-4 border-red-500 p-3 rounded">';
+                html += '<p class="text-red-700 font-semibold"><i class="fas fa-times-circle"></i> 运行失败</p></div>';
+                html += '<pre class="bg-gray-100 p-3 rounded mt-3 text-sm text-red-600">' + (xhr.responseJSON?.message || '未知错误') + '</pre>';
+                $("#test_result").html(html);
+            }
+        });
+    });
+
+    // 点击弹窗外关闭
+    $(window).click(function(event) {
+        if (event.target.id == 'createModal') $("#createModal").hide();
+        if (event.target.id == 'editModal') $("#editModal").hide();
+        if (event.target.id == 'testModal') $("#testModal").hide();
+    });
+});
+
+// ========== 查询核心函数 ==========
+function performQuery() {
+    var queryData = {
+        name: $("#query_name").val(),
+        task_model: $("#query_models").val(),
+        task_tag: $("#query_tag").val(),
+        page: currentPage,
+        page_size: pageSize
+    };
+
+    $.ajax({
+        url: baseUrl + queryTaskPath,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(queryData),
+        xhrFields: { withCredentials: true },
+        success: function (response) {
+            $("#results").empty();
+            var data = response.data || [];
+            var pagination = response.pagination || {};
+
+            totalCount = pagination.total_count || 0;
+            totalPage = pagination.total_pages || 1;
+            currentPage = pagination.current_page || 1;
+
+            updatePaginationControls(pagination);
+
+            if (data.length === 0) {
+                $("#results").html("<p class='text-center py-4 text-gray-500'>没有找到匹配的任务</p>");
+                $("#pagination_controls").addClass("hidden");
+            } else {
+                $("#pagination_controls").removeClass("hidden");
+
+                var table = $("<table class='min-w-full divide-y divide-gray-200'></table>");
+                var thead = $("<thead class='bg-gray-50'></thead>");
+                var tbody = $("<tbody class='bg-white divide-y divide-gray-200'></tbody>");
+
+                var headerRow = $("<tr></tr>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>任务名称</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>模块</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>标签</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>邮箱</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>运行时间</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>发布状态</th>");
+                headerRow.append("<th class='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>操作</th>");
+                thead.append(headerRow);
+
+                $.each(data, function (index, item) {
+                    var row = $("<tr class='hover:bg-gray-50'></tr>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item.id || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>" + (item.name || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item.task_model || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item.task_tag || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item.emails || '') + "</td>");
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>" + (item.runtime || '') + "</td>");
+
+                    var publishBtn = createPublishButton(item.id, item.publish);
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm'>" + publishBtn + "</td>");
+
+                    var actions = createEditButton(item.id) + ' ' + createTestButton(item) + ' ' + createDeleteButton(item.id);
+                    row.append("<td class='px-6 py-4 whitespace-nowrap text-sm flex gap-2'>" + actions + "</td>");
+
+                    tbody.append(row);
+                });
+
+                table.append(thead, tbody);
+                $("#results").append(table);
+            }
+        },
+        error: function (xhr) {
+            $("#results").html("<p class='text-center py-4 text-gray-500'>查询失败: " + (xhr.responseJSON?.message || '未知错误') + "</p>");
+            $("#pagination_controls").addClass("hidden");
+        }
+    });
+}
+
+// ========== 按钮创建函数 ==========
+function createPublishButton(taskId, isPublished) {
+    var btnClass = isPublished ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+    var btnText = isPublished ? '已发布' : '未发布';
+    return '<button data-task-id="' + taskId + '" data-status="' + isPublished + '" class="publish-btn ' + btnClass + ' text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">' + btnText + '</button>';
+}
+
+function createEditButton(taskId) {
+    return '<button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500" data-task-id="' + taskId + '">修改</button>';
+}
+
+function createTestButton(item) {
+    return '<button class="test-btn bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" data-task-name="' + (item.name || '') + '" data-task-model="' + (item.models || '') + '" data-task-tag="' + (item.tag || '') + '">测试</button>';
+}
+
+function createDeleteButton(taskId) {
+    return '<button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" data-task-id="' + taskId + '">删除</button>';
+}
+
+// ========== 分页控件 ==========
+function updatePaginationControls(pagination) {
+    $("#total_count").text(pagination.total_count || 0);
+    $("#current_page").text(pagination.current_page || 1);
+    $("#total_pages").text(pagination.total_pages || 1);
+
+    var hasPrevious = pagination.has_previous || false;
+    var hasNext = pagination.has_next || false;
+
+    $("#first_page").prop("disabled", !hasPrevious);
+    $("#prev_page").prop("disabled", !hasPrevious);
+    $("#next_page").prop("disabled", !hasNext);
+    $("#last_page").prop("disabled", !hasNext);
+
+    updatePageNumbers(pagination.current_page, pagination.total_pages);
+    $("#jump_page_input").attr("max", pagination.total_pages);
+}
+
+function updatePageNumbers(current, total) {
+    var container = $("#page_numbers");
+    container.empty();
+
+    if (total <= 7) {
+        for (var i = 1; i <= total; i++) {
+            container.append(createPageButton(i, i === current));
+        }
+    } else {
+        if (current <= 4) {
+            for (var i = 1; i <= 5; i++) container.append(createPageButton(i, i === current));
+            container.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            container.append(createPageButton(total, false));
+        } else if (current >= total - 3) {
+            container.append(createPageButton(1, false));
+            container.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            for (var i = total - 4; i <= total; i++) container.append(createPageButton(i, i === current));
+        } else {
+            container.append(createPageButton(1, false));
+            container.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            for (var i = current - 1; i <= current + 1; i++) container.append(createPageButton(i, i === current));
+            container.append("<span class='px-2 py-1 text-gray-500'>...</span>");
+            container.append(createPageButton(total, false));
+        }
+    }
+}
+
+function createPageButton(pageNum, isActive) {
+    var classes = "px-3 py-1 border rounded text-sm ";
+    classes += isActive ? "bg-blue-500 text-white border-blue-500" : "border-gray-300 hover:bg-gray-100";
+    return $("<button>", {
+        class: classes,
+        text: pageNum,
+        click: function() {
+            if (!isActive) { currentPage = pageNum; performQuery(); }
+        }
+    });
+}
+</script>
+
 </html>
