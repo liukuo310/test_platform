@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务端性能监控</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        <!-- 头部 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-server mr-2 text-blue-600"></i>
+                服务端性能监控平台
+            </h1>
+
+            <!-- 配置区域 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <!-- 采集模式选择 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">采集模式</label>
+                    <div class="flex space-x-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="collectMode" value="local" checked
+                                   class="w-4 h-4 text-blue-600" onchange="toggleMode()">
+                            <span class="ml-2 text-gray-700">
+                                <i class="fas fa-laptop mr-1"></i>本机采集
+                            </span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="collectMode" value="remote"
+                                   class="w-4 h-4 text-blue-600" onchange="toggleMode()">
+                            <span class="ml-2 text-gray-700">
+                                <i class="fas fa-network-wired mr-1"></i>远程SSH
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 远程配置（默认隐藏） -->
+                <div id="remoteConfig" class="hidden fade-in">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="serverIp" placeholder="服务器IP (如: 192.168.1.9)"
+                               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="serverUser" placeholder="用户名 (如: kuoliu)"
+                               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="password" id="serverPassword" placeholder="密码"
+                               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               style="grid-column: span 2;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据类型选择 -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">监控指标</label>
+                <div class="flex flex-wrap gap-3">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" class="data-type-checkbox w-4 h-4 text-blue-600 rounded"
+                               value="cpu" checked onchange="updateChartVisibility()">
+                        <span class="ml-2 text-gray-700">CPU使用率</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" class="data-type-checkbox w-4 h-4 text-blue-600 rounded"
+                               value="memory" checked onchange="updateChartVisibility()">
+                        <span class="ml-2 text-gray-700">内存使用</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" class="data-type-checkbox w-4 h-4 text-blue-600 rounded"
+                               value="disk" onchange="updateChartVisibility()">
+                        <span class="ml-2 text-gray-700">磁盘IO</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" class="data-type-checkbox w-4 h-4 text-blue-600 rounded"
+                               value="network" onchange="updateChartVisibility()">
+                        <span class="ml-2 text-gray-700">网络流量</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="flex space-x-3">
+                <button id="startBtn" onclick="startCollect()"
+                        class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                    <i class="fas fa-play mr-2"></i>开始采集
+                </button>
+                <button id="stopBtn" onclick="stopCollect()" disabled
+                        class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-stop mr-2"></i>停止采集
+                </button>
+                <button onclick="clearData()"
+                        class="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-trash mr-2"></i>清空数据
+                </button>
+            </div>
+
+            <!-- 状态信息 -->
+            <div id="statusInfo" class="mt-4 hidden">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-blue-700">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                状态: <span id="statusText">采集中...</span>
+                            </p>
+                            <p class="text-xs text-blue-600 mt-1">
+                                已采集帧数: <span id="frameCount">0</span> |
+                                持续时间: <span id="duration">0</span>秒
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                            <span class="text-sm text-blue-700">实时</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 实时指标卡片 -->
+        <div id="metricCards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 hidden">
+            <!-- CPU卡片 -->
+            <div class="metric-card bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-600">CPU使用率</h3>
+                    <i class="fas fa-microchip text-blue-500"></i>
+                </div>
+                <p class="text-2xl font-bold text-gray-800" id="cpuValue">--%</p>
+                <p class="text-xs text-gray-500 mt-1">核心数: <span id="cpuCores">--</span></p>
+            </div>
+
+            <!-- 内存卡片 -->
+            <div class="metric-card bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-600">内存使用</h3>
+                    <i class="fas fa-memory text-purple-500"></i>
+                </div>
+                <p class="text-2xl font-bold text-gray-800" id="memValue">--%</p>
+                <p class="text-xs text-gray-500 mt-1"><span id="memUsed">--</span> / <span id="memTotal">--</span> MB</p>
+            </div>
+
+            <!-- 磁盘卡片 -->
+            <div class="metric-card bg-white rounded-lg shadow-md p-4 border-l-4 border-orange-500">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-600">磁盘使用</h3>
+                    <i class="fas fa-hdd text-orange-500"></i>
+                </div>
+                <p class="text-2xl font-bold text-gray-800" id="diskValue">--%</p>
+                <p class="text-xs text-gray-500 mt-1"><span id="diskUsed">--</span> / <span id="diskTotal">--</span> GB</p>
+            </div>
+
+            <!-- 网络卡片 -->
+            <div class="metric-card bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-600">网络流量</h3>
+                    <i class="fas fa-network-wired text-green-500"></i>
+                </div>
+                <p class="text-sm font-bold text-gray-800">
+                    ↑ <span id="netSent">--</span> MB<br>
+                    ↓ <span id="netRecv">--</span> MB
+                </p>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div id="chartsContainer" class="space-y-6 hidden">
+            <!-- CPU图表 -->
+            <div class="chart-wrapper bg-white rounded-lg shadow-md p-4" data-chart="cpu">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fas fa-microchip mr-2 text-blue-600"></i>CPU使用率趋势
+                </h3>
+                <div class="chart-container">
+                    <canvas id="cpuChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 内存图表 -->
+            <div class="chart-wrapper bg-white rounded-lg shadow-md p-4" data-chart="memory">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fas fa-memory mr-2 text-purple-600"></i>内存使用趋势
+                </h3>
+                <div class="chart-container">
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 磁盘图表 -->
+            <div class="chart-wrapper bg-white rounded-lg shadow-md p-4" data-chart="disk">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fas fa-hdd mr-2 text-orange-600"></i>磁盘IO趋势
+                </h3>
+                <div class="chart-container">
+                    <canvas id="diskChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 网络图表 -->
+            <div class="chart-wrapper bg-white rounded-lg shadow-md p-4" data-chart="network">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fas fa-network-wired mr-2 text-green-600"></i>网络流量趋势
+                </h3>
+                <div class="chart-container">
+                    <canvas id="networkChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let collectTimer = null;
+        let frameCount = 0;
+        let startTime = null;
+        let durationTimer = null;
+        const charts = {};
+        const maxDataPoints = 50; // 最多显示50个数据点
+
+        // 切换采集模式
+        function toggleMode() {
+            const mode = document.querySelector('input[name="collectMode"]:checked').value;
+            const remoteConfig = document.getElementById('remoteConfig');
+
+            if (mode === 'remote') {
+                remoteConfig.classList.remove('hidden');
+            } else {
+                remoteConfig.classList.add('hidden');
+            }
+        }
+
+        // 初始化图表
+        function initChart(chartId, label, color, yAxisLabel) {
+            const ctx = document.getElementById(chartId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '时间'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: yAxisLabel
+                            },
+                            beginAtZero: true
+                        }
+                    },
+                    animation: {
+                        duration: 300
+                    }
+                }
+            });
+        }
+
+        // 更新图表可见性
+        function updateChartVisibility() {
+            const selectedTypes = Array.from(document.querySelectorAll('.data-type-checkbox:checked'))
+                .map(cb => cb.value);
+
+            document.querySelectorAll('.chart-wrapper').forEach(wrapper => {
+                const chartType = wrapper.dataset.chart;
+                if (selectedTypes.includes(chartType)) {
+                    wrapper.style.display = 'block';
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            });
+        }
+
+        // 开始采集
+        async function startCollect() {
+            const mode = document.querySelector('input[name="collectMode"]:checked').value;
+
+            // 验证输入
+            if (mode === 'remote') {
+                const ip = document.getElementById('serverIp').value.trim();
+                const user = document.getElementById('serverUser').value.trim();
+                const password = document.getElementById('serverPassword').value.trim();
+
+                if (!ip || !user || !password) {
+                    alert('请填写完整的服务器信息');
+                    return;
+                }
+            }
+
+            // 获取选中的数据类型
+            const dataTypes = Array.from(document.querySelectorAll('.data-type-checkbox:checked'))
+                .map(cb => cb.value);
+
+            if (dataTypes.length === 0) {
+                alert('请至少选择一个监控指标');
+                return;
+            }
+
+            try {
+                // 初始化配置
+                const configData = {
+                    data_type_list: dataTypes
+                };
+
+                if (mode === 'local') {
+                    configData.service_ip = '127.0.0.1';
+                } else {
+                    const ip = document.getElementById('serverIp').value.trim();
+                    const user = document.getElementById('serverUser').value.trim();
+                    const password = document.getElementById('serverPassword').value.trim();
+                    configData.service_ip = `${user}@${ip}`;
+                    configData.password = password;
+                }
+
+                const response = await fetch('/performance/service/init', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(configData)
+                });
+
+                const result = await response.json();
+
+                if (result.status !== 'success') {
+                    throw new Error(result.message);
+                }
+
+                // 初始化图表
+                initializeCharts(dataTypes);
+
+                // 更新UI状态
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('startBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('stopBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('statusInfo').classList.remove('hidden');
+                document.getElementById('metricCards').classList.remove('hidden');
+                document.getElementById('chartsContainer').classList.remove('hidden');
+
+                // 开始定时采集
+                frameCount = 0;
+                startTime = Date.now();
+
+                // 立即采集一次
+                await collectData();
+
+                // 设置定时器（每2秒采集一次）
+                collectTimer = setInterval(collectData, 2000);
+
+                // 启动持续时间计时器
+                durationTimer = setInterval(updateDuration, 1000);
+
+            } catch (error) {
+                alert('初始化失败: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // 初始化图表
+        function initializeCharts(dataTypes) {
+            const chartConfigs = {
+                cpu: { id: 'cpuChart', label: 'CPU使用率 (%)', color: '#3B82F6', yAxis: '使用率 (%)' },
+                memory: { id: 'memoryChart', label: '内存使用率 (%)', color: '#A855F7', yAxis: '使用率 (%)' },
+                disk: { id: 'diskChart', label: '磁盘读写 (MB/s)', color: '#F97316', yAxis: 'MB/s' },
+                network: { id: 'networkChart', label: '网络流量 (MB)', color: '#22C55E', yAxis: 'MB' }
+            };
+
+            dataTypes.forEach(type => {
+                if (!charts[type] && chartConfigs[type]) {
+                    const config = chartConfigs[type];
+                    charts[type] = initChart(config.id, config.label, config.color, config.yAxis);
+                }
+            });
+
+            updateChartVisibility();
+        }
+
+        // 采集数据
+        async function collectData() {
+            try {
+                const response = await fetch('/performance/service/collect');
+                const result = await response.json();
+
+                if (result.status !== 'success') {
+                    throw new Error(result.message);
+                }
+
+                frameCount = result.frame_index;
+                const timestamp = result.timestamp;
+                const data = result.data;
+
+                // 更新指标卡片
+                updateMetricCards(data);
+
+                // 更新图表
+                updateCharts(timestamp, data);
+
+                // 更新状态
+                document.getElementById('frameCount').textContent = frameCount;
+
+            } catch (error) {
+                console.error('采集数据失败:', error);
+                stopCollect();
+                alert('数据采集失败: ' + error.message);
+            }
+        }
+
+        // 更新指标卡片
+        function updateMetricCards(data) {
+            if (data.cpu) {
+                document.getElementById('cpuValue').textContent = data.cpu.usage_percent.toFixed(1) + '%';
+                document.getElementById('cpuCores').textContent = data.cpu.cpu_count;
+            }
+
+            if (data.memory) {
+                document.getElementById('memValue').textContent = data.memory.usage_percent.toFixed(1) + '%';
+                document.getElementById('memUsed').textContent = data.memory.used_mb.toFixed(0);
+                document.getElementById('memTotal').textContent = data.memory.total_mb.toFixed(0);
+            }
+
+            if (data.disk) {
+                document.getElementById('diskValue').textContent = data.disk.usage_percent + '%';
+                document.getElementById('diskUsed').textContent = data.disk.used_gb.toFixed(0);
+                document.getElementById('diskTotal').textContent = data.disk.total_gb.toFixed(0);
+            }
+
+            if (data.network) {
+                document.getElementById('netSent').textContent = data.network.bytes_sent_mb.toFixed(2);
+                document.getElementById('netRecv').textContent = data.network.bytes_recv_mb.toFixed(2);
+            }
+        }
+
+        // 更新图表
+        function updateCharts(timestamp, data) {
+            Object.keys(data).forEach(type => {
+                if (charts[type] && data[type]) {
+                    const chart = charts[type];
+
+                    // 添加时间标签
+                    chart.data.labels.push(timestamp);
+
+                    // 添加数据
+                    if (type === 'cpu') {
+                        chart.data.datasets[0].data.push(data[type].usage_percent);
+                    } else if (type === 'memory') {
+                        chart.data.datasets[0].data.push(data[type].usage_percent);
+                    } else if (type === 'disk') {
+                        chart.data.datasets[0].data.push({
+                            x: timestamp,
+                            y: data[type].read_mb_per_sec + data[type].write_mb_per_sec
+                        });
+                    } else if (type === 'network') {
+                        chart.data.datasets[0].data.push(data[type].bytes_sent_mb + data[type].bytes_recv_mb);
+                    }
+
+                    // 限制数据点数量
+                    if (chart.data.labels.length > maxDataPoints) {
+                        chart.data.labels.shift();
+                        chart.data.datasets[0].data.shift();
+                    }
+
+                    chart.update('none'); // 无动画更新，提高性能
+                }
+            });
+        }
+
+        // 更新持续时间
+        function updateDuration() {
+            if (startTime) {
+                const duration = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('duration').textContent = duration;
+            }
+        }
+
+        // 停止采集
+        async function stopCollect() {
+            if (collectTimer) {
+                clearInterval(collectTimer);
+                collectTimer = null;
+            }
+
+            if (durationTimer) {
+                clearInterval(durationTimer);
+                durationTimer = null;
+            }
+
+            try {
+                await fetch('/performance/service/stop', { method: 'POST' });
+            } catch (error) {
+                console.error('停止采集失败:', error);
+            }
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('stopBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('statusText').textContent = '已停止';
+        }
+
+        // 清空数据
+        function clearData() {
+            Object.values(charts).forEach(chart => {
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                chart.update();
+            });
+
+            frameCount = 0;
+            document.getElementById('frameCount').textContent = '0';
+            document.getElementById('duration').textContent = '0';
+
+            // 重置指标卡片
+            document.getElementById('cpuValue').textContent = '--%';
+            document.getElementById('memValue').textContent = '--%';
+            document.getElementById('diskValue').textContent = '--%';
+            document.getElementById('netSent').textContent = '--';
+            document.getElementById('netRecv').textContent = '--';
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            updateChartVisibility();
+        });
+
+        // 页面关闭时清理
+        window.addEventListener('beforeunload', function() {
+            if (collectTimer) {
+                stopCollect();
+            }
+        });
+    </script>
+</body>
+</html>

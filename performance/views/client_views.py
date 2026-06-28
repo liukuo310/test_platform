@@ -18,7 +18,7 @@ def get_test_q():
 
 
 def performance_main_view(request):
-    """性能测试主页"""
+    """客户都安性能测试主页"""
     return render(request, "performance/performance_main.html")
 
 
