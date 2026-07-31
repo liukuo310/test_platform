@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试用例管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 底部滑出半屏弹窗样式 */
+        .bottom-sheet-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .bottom-sheet-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fefefe;
+            border-radius: 1rem 1rem 0 0;
+            padding: 2rem;
+            height: 80vh;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .bottom-sheet-close {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            color: #9ca3af;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            line-height: 1;
+        }
+
+        .bottom-sheet-close:hover {
+            color: #1f2937;
+        }
+
+        /* 分页控件样式 */
+        .pagination-btn {
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background-color: #3b82f6;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .page-number {
+            transition: all 0.2s;
+        }
+
+        .page-number:hover {
+            background-color: #dbeafe;
+        }
+
+        .page-number.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        /* 表格行悬停效果 */
+        .table-row-hover {
+            transition: background-color 0.2s;
+        }
+
+        .table-row-hover:hover {
+            background-color: #f9fafb;
+        }
+
+        /* 按钮动画 */
+        .action-btn {
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 搜索框聚焦效果 */
+        .search-input:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* 执行状态标签样式 */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-pass {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-fail {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 font-sans min-h-screen">
+
+    <!-- 主容器 -->
+    <div class="container mx-auto py-8 px-6 max-w-7xl">
+
+        <!-- 页面标题 -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-clipboard-check text-blue-600 mr-3"></i>测试用例管理
+            </h1>
+            <p class="text-gray-600">管理和维护接口自动化测试用例</p>
+        </div>
+
+        <!-- 操作按钮区域 -->
+        <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+            <button id="create_case_btn" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2.5 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center gap-2 action-btn shadow-md">
+                <i class="fas fa-plus-circle"></i> 创建用例
+            </button>
+
+            <button onclick="window.location.href='/test_case/ai_complete/'" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white py-2.5 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 flex items-center gap-2 action-btn shadow-md">
+                <i class="fas fa-magic"></i> AI 生成用例
+            </button>
+
+            <button onclick="window.location.href='/test_case/batch_import/'" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2.5 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center gap-2 action-btn shadow-md">
+                <i class="fas fa-file-import"></i> 批量导入用例（已经写好的文件）
+            </button>
+
+            <div class="text-sm text-gray-600">
+                <i class="fas fa-info-circle mr-1"></i>
+                共 <span id="total_cases_count" class="font-semibold text-blue-600">0</span> 个用例
+            </div>
+        </div>
+
+        <!-- 查询条件区域 -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-search text-gray-500 mr-2"></i>
+                <h2 class="text-lg font-semibold text-gray-800">查询条件</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label for="query_name" class="block text-sm font-medium text-gray-700 mb-1">用例名称</label>
+                    <input type="text" id="query_name" placeholder="输入用例名称" class="search-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_hoster" class="block text-sm font-medium text-gray-700 mb-1">作者</label>
+                    <input type="text" id="query_hoster" placeholder="输入作者名称" class="search-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_tag" class="block text-sm font-medium text-gray-700 mb-1">标签</label>
+                    <input type="text" id="query_tag" placeholder="输入标签" class="search-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="query_status" class="block text-sm font-medium text-gray-700 mb-1">执行状态</label>
+                    <select id="query_status" class="search-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="">全部</option>
+                        <option value="通过">通过</option>
+                        <option value="不通过">不通过</option>
+                        <option value="待执行">待执行</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+                <button id="reset_query_btn" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 mr-2 action-btn">
+                    <i class="fas fa-redo mr-1"></i> 重置
+                </button>
+                <button id="query_case_btn" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 action-btn shadow-md">
+                    <i class="fas fa-search mr-1"></i> 查询
+                </button>
+            </div>
+        </div>
+
+        <!-- 用例列表区域 -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">用例名称</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">作者</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">标签</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">执行状态</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">更新时间</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="case_list_body" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                                <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+                                <p>暂无数据，请点击查询或创建用例</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页控件 -->
+            <div id="case_pagination_controls" class="hidden border-t border-gray-200 px-6 py-4 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-700">
+                            共 <span id="case_total_count" class="font-semibold text-blue-600">0</span> 条记录
+                        </span>
+                        <span class="text-sm text-gray-700">
+                            第 <span id="case_current_page" class="font-semibold text-blue-600">1</span> / <span id="case_total_pages" class="font-semibold text-blue-600">1</span> 页
+                        </span>
+
+                        <select id="case_page_size_select" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="5">5条/页</option>
+                            <option value="10" selected>10条/页</option>
+                            <option value="20">20条/页</option>
+                            <option value="50">50条/页</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button id="case_first_page" class="pagination-btn px-3 py-1.5 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-angle-double-left"></i> 首页
+                        </button>
+                        <button id="case_prev_page" class="pagination-btn px-3 py-1.5 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-angle-left"></i> 上一页
+                        </button>
+
+                        <div id="case_page_numbers" class="flex space-x-1"></div>
+
+                        <button id="case_next_page" class="pagination-btn px-3 py-1.5 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            下一页 <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button id="case_last_page" class="pagination-btn px-3 py-1.5 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            末页 <i class="fas fa-angle-double-right"></i>
+                        </button>
+
+                        <div class="flex items-center space-x-2 ml-3">
+                            <span class="text-sm text-gray-600">跳至</span>
+                            <input type="number" id="case_jump_page_input" min="1" class="w-16 border border-gray-300 rounded px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="case_jump_page_btn" class="px-3 py-1.5 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition">
+                                GO
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建用例半屏弹窗 -->
+    <div id="createCaseModal" class="bottom-sheet-modal">
+        <div class="bottom-sheet-content">
+            <span class="bottom-sheet-close">&times;</span>
+            <div class="flex items-center mb-6">
+                <i class="fas fa-plus-circle text-blue-600 text-2xl mr-3"></i>
+                <h2 class="text-2xl font-bold text-gray-800">创建测试用例</h2>
+            </div>
+
+            <form id="create_case_form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="create_name" class="block text-sm font-medium text-gray-700 mb-1">
+                            <span class="text-red-500">*</span> 用例名称
+                        </label>
+                        <input type="text" id="create_name" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="请输入用例名称">
+                    </div>
+                    <div>
+                        <label for="create_hoster_name" class="block text-sm font-medium text-gray-700 mb-1">
+                            <span class="text-red-500">*</span> 作者
+                        </label>
+                        <input type="text" id="create_hoster_name" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="请输入作者名称">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="create_tag" class="block text-sm font-medium text-gray-700 mb-1">标签</label>
+                        <input type="text" id="create_tag" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="例如：冒烟测试、回归测试">
+                    </div>
+                    <div>
+                        <label for="create_annotation" class="block text-sm font-medium text-gray-700 mb-1">注释</label>
+                        <input type="text" id="create_annotation" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="用例说明">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="create_case_setup" class="block text-sm font-medium text-gray-700 mb-1">前置条件</label>
+                        <textarea id="create_case_setup" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="测试前置条件"></textarea>
+                    </div>
+                    <div>
+                        <label for="create_case_teardown" class="block text-sm font-medium text-gray-700 mb-1">后置条件</label>
+                        <textarea id="create_case_teardown" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="测试后置条件"></textarea>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">操作步骤（JSON格式）</label>
+                    <textarea id="create_case_steps" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono" placeholder='例如：[{"step": 1, "action": "点击登录按钮", "data": ""}]'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的数组，每个元素包含 step、action、data</p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">断言规则（JSON格式）</label>
+                    <textarea id="create_case_asserts" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono" placeholder='例如：[{"field": "code", "expected": 200, "operator": "=="}]'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的数组，每个元素包含 field、expected、operator</p>
+                </div>
+
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">执行状态（JSON格式）</label>
+                    <textarea id="create_exec_status" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono" placeholder='{"1.0版本": "通过", "2.0版本": "不通过"}'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的键值对，例如：{"1.0版本": "通过", "2.0版本": "不通过"}</p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                    <button type="button" id="cancel_create_case" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 action-btn">
+                        <i class="fas fa-times mr-1"></i> 取消
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 action-btn shadow-md">
+                        <i class="fas fa-save mr-1"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 编辑用例半屏弹窗 -->
+    <div id="editCaseModal" class="bottom-sheet-modal">
+        <div class="bottom-sheet-content">
+            <span class="bottom-sheet-close">&times;</span>
+            <div class="flex items-center mb-6">
+                <i class="fas fa-edit text-blue-600 text-2xl mr-3"></i>
+                <h2 class="text-2xl font-bold text-gray-800">编辑测试用例</h2>
+            </div>
+
+            <form id="edit_case_form">
+                <input type="hidden" id="edit_case_id">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="edit_name" class="block text-sm font-medium text-gray-700 mb-1">
+                            <span class="text-red-500">*</span> 用例名称
+                        </label>
+                        <input type="text" id="edit_name" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="edit_hoster_name" class="block text-sm font-medium text-gray-700 mb-1">
+                            <span class="text-red-500">*</span> 作者
+                        </label>
+                        <input type="text" id="edit_hoster_name" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="edit_tag" class="block text-sm font-medium text-gray-700 mb-1">标签</label>
+                        <input type="text" id="edit_tag" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="edit_annotation" class="block text-sm font-medium text-gray-700 mb-1">注释</label>
+                        <input type="text" id="edit_annotation" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="edit_case_setup" class="block text-sm font-medium text-gray-700 mb-1">前置条件</label>
+                        <textarea id="edit_case_setup" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label for="edit_case_teardown" class="block text-sm font-medium text-gray-700 mb-1">后置条件</label>
+                        <textarea id="edit_case_teardown" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">操作步骤（JSON格式）</label>
+                    <textarea id="edit_case_steps" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono" placeholder='例如：[{"step": 1, "action": "点击登录按钮", "data": ""}, {"step": 2, "action": "输入用户名", "data": "admin"}]'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的数组，每个元素包含 step（步骤序号）、action（操作动作）、data（操作数据）</p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">断言规则（JSON格式）</label>
+                    <textarea id="edit_case_asserts" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono" placeholder='例如：[{"field": "code", "expected": 200, "operator": "=="}, {"field": "message", "expected": "success", "operator": "=="}]'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的数组，每个元素包含 field（字段名）、expected（期望值）、operator（比较运算符）</p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">执行状态（JSON格式）</label>
+                    <textarea id="edit_exec_status" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的键值对</p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                    <button type="button" id="cancel_edit_case" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 action-btn">
+                        <i class="fas fa-times mr-1"></i> 取消
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 action-btn shadow-md">
+                        <i class="fas fa-save mr-1"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+
+<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+<script>
+// API 基础路径
+var baseUrl = "http://127.0.0.1:8000/test_case/";
+
+// 分页相关变量
+var currentPage = 1;
+var pageSize = 10;
+var totalPage = 1;
+var totalCount = 0;
+
+$(document).ready(function () {
+
+    // ==================== 创建用例相关 ====================
+
+    // 打开创建用例弹窗
+    $("#create_case_btn").click(function () {
+        $("#createCaseModal").css("display", "block");
+    });
+
+    // 关闭创建用例弹窗
+    $(".bottom-sheet-close, #cancel_create_case").click(function () {
+        $("#createCaseModal").css("display", "none");
+        $("#create_case_form")[0].reset();
+    });
+
+    // 提交创建用例表单
+    $("#create_case_form").submit(function (e) {
+        e.preventDefault();
+
+        var execStatusText = $("#create_exec_status").val().trim();
+        var execStatus = {};
+
+        if (execStatusText) {
+            try {
+                execStatus = JSON.parse(execStatusText);
+            } catch (e) {
+                alert("执行状态JSON格式错误，请检查输入");
+                return;
+            }
+        }
+
+        var caseStepsText = $("#create_case_steps").val().trim();
+        var caseSteps = [];
+
+        if (caseStepsText) {
+            try {
+                caseSteps = JSON.parse(caseStepsText);
+            } catch (e) {
+                alert("操作步骤JSON格式错误，请检查输入");
+                return;
+            }
+        }
+
+        var caseAssertsText = $("#create_case_asserts").val().trim();
+        var caseAsserts = [];
+
+        if (caseAssertsText) {
+            try {
+                caseAsserts = JSON.parse(caseAssertsText);
+            } catch (e) {
+                alert("断言规则JSON格式错误，请检查输入");
+                return;
+            }
+        }
+
+        var postData = {
+            name: $("#create_name").val(),
+            hoster_name: $("#create_hoster_name").val(),
+            tag: $("#create_tag").val(),
+            annotation: $("#create_annotation").val(),
+            case_setup: $("#create_case_setup").val(),
+            case_teardown: $("#create_case_teardown").val(),
+            case_steps: caseSteps,
+            case_asserts: caseAsserts,
+            exec_status: execStatus,
+            last_update_person: $("#create_hoster_name").val()
+        };
+
+        $.ajax({
+            url: baseUrl + "create",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(postData),
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function (response) {
+                alert("创建用例成功");
+                $("#createCaseModal").css("display", "none");
+                $("#create_case_form")[0].reset();
+                performQuery();
+            },
+            error: function (xhr, status, error) {
+                console.error("创建失败:", error);
+                alert("创建失败：" + (xhr.responseJSON?.message || error));
+            }
+        });
+    });
+    // ==================== 查询用例相关 ====================
+
+    // 查询按钮点击事件
+    $("#query_case_btn").click(function () {
+        currentPage = 1;
+        performQuery();
+    });
+
+    // 重置查询条件
+    $("#reset_query_btn").click(function () {
+        $("#query_name").val("");
+        $("#query_hoster").val("");
+        $("#query_tag").val("");
+        $("#query_status").val("");
+        currentPage = 1;
+        performQuery();
+    });
+
+    // 每页显示条数改变事件
+    $("#case_page_size_select").change(function() {
+        pageSize = parseInt($(this).val());
+        currentPage = 1;
+        performQuery();
+    });
+
+    // 分页按钮事件
+    $("#case_first_page").click(function() {
+        if (currentPage > 1) {
+            currentPage = 1;
+            performQuery();
+        }
+    });
+
+    $("#case_prev_page").click(function() {
+        if (currentPage > 1) {
+            currentPage--;
+            performQuery();
+        }
+    });
+
+    $("#case_next_page").click(function() {
+        if (currentPage < totalPage) {
+            currentPage++;
+            performQuery();
+        }
+    });
+
+    $("#case_last_page").click(function() {
+        if (currentPage < totalPage) {
+            currentPage = totalPage;
+            performQuery();
+        }
+    });
+
+    $("#case_jump_page_btn").click(function() {
+        var jumpPage = parseInt($("#case_jump_page_input").val());
+        if (jumpPage >= 1 && jumpPage <= totalPage && jumpPage !== currentPage) {
+            currentPage = jumpPage;
+            performQuery();
+        }
+    });
+
+    $("#case_jump_page_input").keypress(function(e) {
+        if (e.which === 13) {
+            $("#case_jump_page_btn").click();
+        }
+    });
+
+    // ==================== 编辑用例相关 ====================
+
+    // 关闭编辑弹窗
+    $("#editCaseModal .bottom-sheet-close, #cancel_edit_case").click(function () {
+        $("#editCaseModal").css("display", "none");
+        $("#edit_case_form")[0].reset();
+    });
+
+    // 提交编辑表单
+    $("#edit_case_form").submit(function (e) {
+        e.preventDefault();
+
+        var execStatusText = $("#edit_exec_status").val().trim();
+        var execStatus = {};
+
+        if (execStatusText) {
+            try {
+                execStatus = JSON.parse(execStatusText);
+            } catch (e) {
+                alert("执行状态JSON格式错误，请检查输入");
+                return;
+            }
+        }
+
+        var caseStepsText = $("#edit_case_steps").val().trim();
+        var caseSteps = [];
+
+        if (caseStepsText) {
+            try {
+                caseSteps = JSON.parse(caseStepsText);
+            } catch (e) {
+                alert("操作步骤JSON格式错误，请检查输入");
+                return;
+            }
+        }
+
+        var caseAssertsText = $("#edit_case_asserts").val().trim();
+        var caseAsserts = [];
+
+        if (caseAssertsText) {
+            try {
+                caseAsserts = JSON.parse(caseAssertsText);
+            } catch (e) {
+                alert("断言规则JSON格式错误，请检查输入");
+                return;
+            }
+        }
+
+        var postData = {
+            case_id: parseInt($("#edit_case_id").val()),
+            name: $("#edit_name").val(),
+            hoster_name: $("#edit_hoster_name").val(),
+            tag: $("#edit_tag").val(),
+            annotation: $("#edit_annotation").val(),
+            case_setup: $("#edit_case_setup").val(),
+            case_teardown: $("#edit_case_teardown").val(),
+            case_steps: caseSteps,
+            case_asserts: caseAsserts,
+            exec_status: execStatus,
+            last_update_person: $("#edit_hoster_name").val()
+        };
+
+        $.ajax({
+            url: baseUrl + "update",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(postData),
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function (response) {
+                alert("更新用例成功");
+                $("#editCaseModal").css("display", "none");
+                $("#edit_case_form")[0].reset();
+                performQuery();
+            },
+            error: function (xhr, status, error) {
+                console.error("更新失败:", error);
+                alert("更新失败：" + (xhr.responseJSON?.message || error));
+            }
+        });
+    });
+
+    // ==================== 删除用例相关 ====================
+
+    // 删除按钮点击事件（使用事件委托）
+    $(document).on('click', '.delete-btn', function() {
+        var caseId = $(this).data('case-id');
+
+        if (!confirm('确定要删除这个用例吗？此操作不可撤销。')) {
+            return;
+        }
+
+        $.ajax({
+            url: baseUrl + "delete",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ case_id: caseId }),
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function (response) {
+                alert("删除成功");
+                performQuery();
+            },
+            error: function (xhr, status, error) {
+                console.error("删除失败:", error);
+                alert("删除失败：" + (xhr.responseJSON?.message || error));
+            }
+        });
+    });
+
+
+    // 编辑按钮点击事件(使用事件委托)
+    $(document).on('click', '.edit-btn', function() {
+        var caseId = $(this).data('case-id');
+
+        $.ajax({
+            url: baseUrl + "get",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                case_id: caseId
+            }),
+            beforeSend: function(xhr, settings) {
+                var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            },
+            success: function (response) {
+                if (response.status === 'success' && response.data) {
+                    var data = response.data;
+
+                    $("#edit_case_id").val(data.case_id);
+                    $("#edit_name").val(data.name);
+                    $("#edit_hoster_name").val(data.hoster_name);
+                    $("#edit_tag").val(data.tag || "");
+                    $("#edit_annotation").val(data.annotation || "");
+                    $("#edit_case_setup").val(data.case_setup || "");
+                    $("#edit_case_teardown").val(data.case_teardown || "");
+
+                    if (data.case_steps && Array.isArray(data.case_steps) && data.case_steps.length > 0) {
+                        $("#edit_case_steps").val(JSON.stringify(data.case_steps, null, 2));
+                    } else {
+                        $("#edit_case_steps").val("");
+                    }
+
+                    if (data.case_asserts && Array.isArray(data.case_asserts) && data.case_asserts.length > 0) {
+                        $("#edit_case_asserts").val(JSON.stringify(data.case_asserts, null, 2));
+                    } else {
+                        $("#edit_case_asserts").val("");
+                    }
+
+                    if (data.exec_status && Object.keys(data.exec_status).length > 0) {
+                        $("#edit_exec_status").val(JSON.stringify(data.exec_status, null, 2));
+                    } else {
+                        $("#edit_exec_status").val("");
+                    }
+
+                    $("#editCaseModal").css("display", "block");
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("获取用例详情失败:", error);
+                alert("获取用例详情失败：" + (xhr.responseJSON?.message || error));
+            }
+        });
+    });
+
+
+    // 点击弹窗外区域关闭弹窗
+    $(window).click(function(event) {
+        if ($(event.target).hasClass('bottom-sheet-modal')) {
+            $(event.target).css("display", "none");
+        }
+    });
+});
+
+// 执行查询的核心函数
+function performQuery() {
+    var queryName = $("#query_name").val();
+    var queryHoster = $("#query_hoster").val();
+    var queryTag = $("#query_tag").val();
+    var queryStatus = $("#query_status").val();
+
+    $.ajax({
+        url: baseUrl + "get",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+            page: currentPage,
+            page_size: pageSize,
+            name: queryName,
+            hoster_name: queryHoster,
+            tag: queryTag
+        }),
+        beforeSend: function(xhr, settings) {
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (csrfToken) {
+                xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            }
+        },
+        success: function (response) {
+            if (response.status === 'success') {
+                var pageData = response.data || [];
+                var pagination = response.pagination || {};
+
+                // 更新分页信息
+                totalCount = pagination.total_count || 0;
+                totalPage = pagination.total_pages || 1;
+                currentPage = pagination.current_page || 1;
+
+                // 确保当前页不超过总页数
+                if (currentPage > totalPage) {
+                    currentPage = totalPage;
+                }
+
+                // 渲染列表
+                renderCaseList(pageData);
+
+                // 更新分页控件
+                updatePaginationControls();
+
+                // 更新总数显示
+                $("#total_cases_count").text(totalCount);
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error("查询失败:", error);
+            alert("查询失败：" + (xhr.responseJSON?.message || error));
+        }
+    });
+}
+
+// 渲染用例列表
+function renderCaseList(data) {
+    var tbody = $("#case_list_body");
+    tbody.empty();
+
+    if (data.length === 0) {
+        tbody.append('<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">' +
+            '<i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>' +
+            '<p>没有找到匹配的用例</p></td></tr>');
+        return;
+    }
+
+    $.each(data, function(index, item) {
+        var row = $('<tr class="table-row-hover"></tr>');
+
+        // ID
+        row.append('<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">' + (item.case_id || '') + '</td>');
+
+        // 用例名称
+        row.append('<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">' + (item.name || '') + '</td>');
+
+        // 作者
+        row.append('<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + (item.hoster_name || '') + '</td>');
+
+        // 标签
+        var tagHtml = item.case_tag ?
+            '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">' +
+            '<i class="fas fa-tag mr-1"></i>' + item.case_tag + '</span>' :
+            '<span class="text-gray-400">-</span>';
+        row.append('<td class="px-6 py-4 whitespace-nowrap text-sm">' + tagHtml + '</td>');
+
+        // 执行状态（显示第一个状态）
+        var statusHtml = '<span class="text-gray-400">-</span>';
+        if (item.exec_status && Object.keys(item.exec_status).length > 0) {
+            var firstValue = Object.values(item.exec_status)[0];
+            var statusClass = 'status-pending';
+            if (firstValue === '通过') {
+                statusClass = 'status-pass';
+            } else if (firstValue === '不通过') {
+                statusClass = 'status-fail';
+            }
+            statusHtml = '<span class="status-badge ' + statusClass + '">' + firstValue + '</span>';
+        }
+        row.append('<td class="px-6 py-4 whitespace-nowrap text-sm">' + statusHtml + '</td>');
+
+        // 更新时间
+        row.append('<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">' + (item.update_time || '') + '</td>');
+
+        // 操作按钮
+        var actions = '<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">' +
+            '<button class="edit-btn action-btn bg-blue-500 hover:bg-blue-600 text-white py-1.5 px-4 rounded text-xs mr-2" data-case-id="' + item.case_id + '">' +
+            '<i class="fas fa-edit mr-1"></i>编辑</button>' +
+            '<button class="delete-btn action-btn bg-red-500 hover:bg-red-600 text-white py-1.5 px-4 rounded text-xs" data-case-id="' + item.case_id + '">' +
+            '<i class="fas fa-trash-alt mr-1"></i>删除</button></td>';
+        row.append(actions);
+
+        tbody.append(row);
+    });
+}
+
+// 更新分页控件
+function updatePaginationControls() {
+    // 更新统计信息
+    $("#case_total_count").text(totalCount);
+    $("#case_current_page").text(currentPage);
+    $("#case_total_pages").text(totalPage);
+
+    // 显示/隐藏分页控件
+    if (totalCount > 0) {
+        $("#case_pagination_controls").removeClass("hidden");
+    } else {
+        $("#case_pagination_controls").addClass("hidden");
+    }
+
+    // 更新按钮状态
+    var hasPrevious = currentPage > 1;
+    var hasNext = currentPage < totalPage;
+
+    $("#case_first_page").prop("disabled", !hasPrevious);
+    $("#case_prev_page").prop("disabled", !hasPrevious);
+    $("#case_next_page").prop("disabled", !hasNext);
+    $("#case_last_page").prop("disabled", !hasNext);
+
+    // 更新页码显示
+    updatePageNumbers(currentPage, totalPage);
+
+    // 更新跳转输入框
+    $("#case_jump_page_input").attr("max", totalPage).val(currentPage);
+}
+
+// 更新页码显示
+function updatePageNumbers(currentPage, totalPages) {
+    var pageNumbersContainer = $("#case_page_numbers");
+    pageNumbersContainer.empty();
+
+    if (totalPages <= 7) {
+        for (var i = 1; i <= totalPages; i++) {
+            pageNumbersContainer.append(createPageButton(i, i === currentPage));
+        }
+    } else {
+        if (currentPage <= 4) {
+            for (var i = 1; i <= 5; i++) {
+                pageNumbersContainer.append(createPageButton(i, i === currentPage));
+            }
+            pageNumbersContainer.append('<span class="px-2 py-1 text-gray-400">...</span>');
+            pageNumbersContainer.append(createPageButton(totalPages, false));
+        } else if (currentPage >= totalPages - 3) {
+            pageNumbersContainer.append(createPageButton(1, false));
+            pageNumbersContainer.append('<span class="px-2 py-1 text-gray-400">...</span>');
+            for (var i = totalPages - 4; i <= totalPages; i++) {
+                pageNumbersContainer.append(createPageButton(i, i === currentPage));
+            }
+        } else {
+            pageNumbersContainer.append(createPageButton(1, false));
+            pageNumbersContainer.append('<span class="px-2 py-1 text-gray-400">...</span>');
+            for (var i = currentPage - 1; i <= currentPage + 1; i++) {
+                pageNumbersContainer.append(createPageButton(i, i === currentPage));
+            }
+            pageNumbersContainer.append('<span class="px-2 py-1 text-gray-400">...</span>');
+            pageNumbersContainer.append(createPageButton(totalPages, false));
+        }
+    }
+}
+
+// 创建页码按钮
+function createPageButton(pageNum, isActive) {
+    var classes = "page-number px-3 py-1.5 border rounded text-sm cursor-pointer ";
+    if (isActive) {
+        classes += "active border-blue-500";
+    } else {
+        classes += "border-gray-300 bg-white";
+    }
+
+    var button = $('<button class="' + classes + '" data-page="' + pageNum + '">' + pageNum + '</button>');
+
+    button.click(function() {
+        if (!isActive) {
+            currentPage = pageNum;
+            performQuery();
+        }
+    });
+
+    return button;
+}
+</script>
+
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性能测试平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+        .gradient-bg-1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .gradient-bg-2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-12 max-w-6xl">
+        <!-- 页面标题 -->
+        <div class="text-center mb-12 fade-in">
+            <h1 class="text-5xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-chart-line mr-3 text-purple-600"></i>
+                性能测试平台
+            </h1>
+            <p class="text-xl text-gray-600">选择测试类型开始性能监控</p>
+        </div>
+
+        <!-- 选项卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 服务端性能测试 -->
+            <a href="/performance/service/page" class="block fade-in">
+                <div class="card-hover bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer">
+                    <!-- 渐变头部 -->
+                    <div class="gradient-bg-1 p-8 text-white">
+                        <div class="flex items-center justify-between mb-4">
+                            <i class="fas fa-server text-6xl opacity-80"></i>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-semibold">
+                                SSH远程采集
+                            </span>
+                        </div>
+                        <h2 class="text-3xl font-bold mb-2">服务端性能测试</h2>
+                        <p class="text-white text-opacity-90">Server Performance Testing</p>
+                    </div>
+
+                    <!-- 内容区域 -->
+                    <div class="p-8">
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800 mb-1">实时监控</h3>
+                                    <p class="text-sm text-gray-600">CPU、内存、磁盘、网络等关键指标实时采集</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800 mb-1">灵活部署</h3>
+                                    <p class="text-sm text-gray-600">支持本地采集或SSH远程连接Linux/macOS服务器</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800 mb-1">可视化图表</h3>
+                                    <p class="text-sm text-gray-600">动态折线图展示性能趋势，直观分析数据</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 按钮 -->
+                        <div class="mt-8">
+                            <button class="w-full gradient-bg-1 text-white py-3 px-6 rounded-lg font-semibold hover:opacity-90 transition-opacity flex items-center justify-center">
+                                <span>开始测试</span>
+                                <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 客户端性能测试 -->
+            <a href="/performance/client_performance_main" class="block fade-in">
+                <div class="card-hover bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer">
+                    <!-- 渐变头部 -->
+                    <div class="gradient-bg-2 p-8 text-white">
+                        <div class="flex items-center justify-between mb-4">
+                            <i class="fas fa-mobile-alt text-6xl opacity-80"></i>
+                            <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-semibold">
+                                移动设备采集
+                            </span>
+                        </div>
+                        <h2 class="text-3xl font-bold mb-2">客户端性能测试</h2>
+                        <p class="text-white text-opacity-90">Client Performance Testing</p>
+                    </div>
+
+                    <!-- 内容区域 -->
+                    <div class="p-8">
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800 mb-1">多平台支持</h3>
+                                    <p class="text-sm text-gray-600">支持Android和iOS设备性能数据采集</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800 mb-1">全面指标</h3>
+                                    <p class="text-sm text-gray-600">FPS、CPU、内存、电量、网络流量等全方位监控</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800 mb-1">报告生成</h3>
+                                    <p class="text-sm text-gray-600">自动生成性能测试报告，支持数据导出</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 按钮 -->
+                        <div class="mt-8">
+                            <button class="w-full gradient-bg-2 text-white py-3 px-6 rounded-lg font-semibold hover:opacity-90 transition-opacity flex items-center justify-center">
+                                <span>开始测试</span>
+                                <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 底部说明 -->
+        <div class="mt-12 text-center fade-in">
+            <div class="bg-white rounded-lg shadow-md p-6 inline-block">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                    使用提示
+                </h3>
+                <div class="text-left text-sm text-gray-600 space-y-2">
+                    <p><i class="fas fa-server mr-2 text-purple-600"></i><strong>服务端测试：</strong>适用于Web服务器、API服务等后端性能监控</p>
+                    <p><i class="fas fa-mobile-alt mr-2 text-pink-600"></i><strong>客户端测试：</strong>适用于移动App、H5页面等前端性能分析</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加点击动画效果
+        document.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 100);
+            });
+        });
+    </script>
+</body>
+</html>

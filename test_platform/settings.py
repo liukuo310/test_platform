@@ -46,7 +46,10 @@ INSTALLED_APPS = [
     #  客户端性能测试应用
     'performance.apps.PerformanceConfig',
     #  接口测试平台
-    'api_platform.apps.ApiPlatformConfig'
+    'api_platform.apps.ApiPlatformConfig',
+    # 用例平台
+    'case_platform.apps.CasePlatformConfig',
+
 ]
 
 MIDDLEWARE = [
