@@ -80,12 +80,12 @@ def init_performance_conf(request):
 
             # IP或域名格式校验
             # 支持：IPv4、localhost、域名
-            # ip_pattern = r'^(\d{1,3}\.){3}\d{1,3}$|^localhost$|^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            # if not re.match(ip_pattern, ip_addr):
-            #     return JsonResponse({
-            #         'status': 'failed',
-            #         'message': 'IP地址或域名格式不正确'
-            #     }, status=400)
+            ip_pattern = r'^(\d{1,3}\.){3}\d{1,3}$|^localhost$|^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(ip_pattern, ip_addr):
+                return JsonResponse({
+                    'status': 'failed',
+                    'message': 'IP地址或域名格式不正确'
+                }, status=400)
 
 
             if not password:
@@ -101,7 +101,7 @@ def init_performance_conf(request):
                     os_type = collector.remote_os_type
 
                     # 记录服务器信息
-                    logger.info(f"远程服务器类型: {os_type}, IP: {ip_addr}")
+                    logger.info(f"远程服务器类型: {os_type}, IP: {                                                          ip_addr}")
 
                     # 如果是未知系统，给出警告
                     if os_type == 'unknown':

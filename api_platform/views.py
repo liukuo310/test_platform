@@ -142,7 +142,6 @@ def get_api(request):
     """获取接口"""
     try:
         query_params = json.loads(request.body)
-        print(f"查询参数是:{query_params}")
     except json.JSONDecodeError:
         return JsonResponse({'message': 'Invalid JSON format'}, status=400)
     page = int(query_params.get("page", 1))  # 不传参数情况默认为1
@@ -161,10 +160,8 @@ def get_api(request):
             query &= Q(**{field_name: value})
     query_type = query_params.get("query_type")
     if query_type == "using":
-        print("查询发布的接口")
         apis = apis.filter(publish=True)
-        print(apis)
-    apis_query = apis.filter(query).order_by('id')
+    apis_query = apis.filter(query).order_by('-id')
     if not apis_query:
         return JsonResponse({'message': 'API not found'}, status=404)
     paginator = Paginator(apis_query, page_size)
@@ -280,7 +277,6 @@ def get_case(request):
     """查询用例"""
     try:
         query_params = json.loads(request.body)
-        print(f"传递的参数是:{query_params}")
         page = int(query_params.get("page", 1))  # 不传参数情况默认为1
         page_size = int(query_params.get("page_size", 10))
         cases = Case.objects.all()
@@ -293,11 +289,9 @@ def get_case(request):
             if key in [field.name for field in Case._meta.fields]:
                 field_name = f"{key}__icontains"
                 query &= Q(**{field_name: value})
-        print(query)
-        cases_ = cases.filter(query).order_by('id')
+        cases_ = cases.filter(query).order_by('-id')
         if not cases_:
             return JsonResponse({'message': 'Case not found'}, status=404)
-        print(f"case的值{cases_}")
         paginator = Paginator(cases_, page_size)
         try:
             paginated_cases = paginator.page(page)
@@ -324,7 +318,6 @@ def get_case(request):
                 "previous_page": paginated_cases.previous_page_number() if paginated_cases.has_previous() else None
             }
         }
-        print(data)
         return JsonResponse(data, status=200)
     except Case.DoesNotExist:
         return JsonResponse({'message': 'Case not found'}, status=404)

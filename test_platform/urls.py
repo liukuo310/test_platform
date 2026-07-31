@@ -21,6 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('test_plat/', include('plat.urls')),
     path('performance/', include('performance.urls'), name="客户端性能测试平台"),
-    path('api_platform/', include('api_platform.urls'), name="接口测试平台")
+    path('api_platform/', include('api_platform.urls'), name="接口测试平台"),
+    path('test_case/', include('case_platform.urls'), name="用例测试平台")
 
 ]
