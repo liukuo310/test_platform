@@ -44,6 +44,46 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
+
+        .edit-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .edit-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 
@@ -134,6 +174,91 @@
                     <h3 class="text-lg font-semibold text-red-800 mb-2">生成失败</h3>
                     <p id="error_text" class="text-red-700"></p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 编辑用例弹窗 -->
+    <div id="edit_modal" class="edit-modal">
+        <div class="modal-content">
+            <div class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-t-xl flex justify-between items-center">
+                <h3 class="text-xl font-bold">
+                    <i class="fas fa-edit mr-2"></i>编辑测试用例
+                </h3>
+                <button onclick="closeEditModal()" class="text-white hover:text-gray-200 transition">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="edit_case_index">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <span class="text-red-500">*</span> 用例名称
+                    </label>
+                    <input type="text" id="edit_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">负责人</label>
+                        <input type="text" id="edit_hoster_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">标签</label>
+                        <input type="text" id="edit_case_tag" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">用例描述</label>
+                    <textarea id="edit_annotation" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">前置条件</label>
+                    <textarea id="edit_case_setup" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">后置条件</label>
+                    <textarea id="edit_case_teardown" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-list-ol text-blue-600 mr-1"></i>测试步骤
+                    </label>
+                    <div id="edit_steps_container" class="space-y-3">
+                        <!-- 动态插入步骤输入框 -->
+                    </div>
+                    <button onclick="addEditStep()" class="mt-3 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition">
+                        <i class="fas fa-plus mr-1"></i>添加步骤
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-check-circle text-purple-600 mr-1"></i>断言规则
+                    </label>
+                    <div id="edit_asserts_container" class="space-y-3">
+                        <!-- 动态插入断言输入框 -->
+                    </div>
+                    <button onclick="addEditAssert()" class="mt-3 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm transition">
+                        <i class="fas fa-plus mr-1"></i>添加断言
+                    </button>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 px-6 py-4 flex justify-end gap-3 rounded-b-xl">
+                <button onclick="closeEditModal()" class="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition">
+                    取消
+                </button>
+                <button onclick="saveEditCase()" class="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition shadow-lg">
+                    <i class="fas fa-save mr-1"></i>保存
+                </button>
             </div>
         </div>
     </div>
@@ -234,6 +359,15 @@
                 : '<p class="text-sm text-gray-500">暂无断言信息</p>';
 
             card.innerHTML = `
+                <div class="absolute top-4 right-4 flex gap-2">
+                    <button onclick="editCase(${index})" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition shadow-md" title="编辑">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteCase(${index})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition shadow-md" title="删除">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex-1">
                         <div class="flex items-center mb-2">
@@ -291,6 +425,178 @@
             `;
 
             return card;
+        }
+
+        // 编辑用例
+        function editCase(index) {
+            const testCase = generatedCases[index];
+            document.getElementById('edit_case_index').value = index;
+            document.getElementById('edit_name').value = testCase.name || '';
+            document.getElementById('edit_hoster_name').value = testCase.hoster_name || '';
+            document.getElementById('edit_case_tag').value = testCase.case_tag || '';
+            document.getElementById('edit_annotation').value = testCase.annotation || '';
+            document.getElementById('edit_case_setup').value = testCase.case_setup || '';
+            document.getElementById('edit_case_teardown').value = testCase.case_teardown || '';
+
+            // 渲染步骤
+            const stepsContainer = document.getElementById('edit_steps_container');
+            stepsContainer.innerHTML = '';
+            if (testCase.case_steps && testCase.case_steps.length > 0) {
+                testCase.case_steps.forEach((step, stepIndex) => {
+                    addStepToEditModal(step, stepIndex);
+                });
+            } else {
+                addStepToEditModal(null, 0);
+            }
+
+            // 渲染断言
+            const assertsContainer = document.getElementById('edit_asserts_container');
+            assertsContainer.innerHTML = '';
+            if (testCase.case_asserts && testCase.case_asserts.length > 0) {
+                testCase.case_asserts.forEach((assert, assertIndex) => {
+                    addAssertToEditModal(assert, assertIndex);
+                });
+            } else {
+                addAssertToEditModal(null, 0);
+            }
+
+            // 显示弹窗
+            document.getElementById('edit_modal').classList.add('show');
+        }
+
+        // 关闭编辑弹窗
+        function closeEditModal() {
+            document.getElementById('edit_modal').classList.remove('show');
+        }
+
+        // 添加步骤到编辑弹窗
+        function addStepToEditModal(step = null, index = 0) {
+            const container = document.getElementById('edit_steps_container');
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'bg-gray-50 border border-gray-200 rounded-lg p-3';
+            stepDiv.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-semibold text-gray-700">步骤 ${index + 1}</span>
+                    <button onclick="removeStep(this)" class="text-red-500 hover:text-red-700 text-sm">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <input type="number" placeholder="步骤序号" value="${step ? step.step_number : index + 1}" class="step-number w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <input type="text" placeholder="步骤描述" value="${step ? step.step_description : ''}" class="step-description w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <input type="text" placeholder="预期结果" value="${step ? step.expected_result : ''}" class="step-expected-result w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                </div>
+            `;
+            container.appendChild(stepDiv);
+        }
+
+        function addEditStep() {
+            const container = document.getElementById('edit_steps_container');
+            const index = container.children.length;
+            addStepToEditModal(null, index);
+        }
+
+        function removeStep(btn) {
+            btn.closest('.bg-gray-50').remove();
+            // 重新编号
+            const steps = document.querySelectorAll('#edit_steps_container > div');
+            steps.forEach((step, idx) => {
+                step.querySelector('span').textContent = `步骤 ${idx + 1}`;
+            });
+        }
+
+        // 添加断言到编辑弹窗
+        function addAssertToEditModal(assert = null, index = 0) {
+            const container = document.getElementById('edit_asserts_container');
+            const assertDiv = document.createElement('div');
+            assertDiv.className = 'bg-purple-50 border border-purple-200 rounded-lg p-3';
+            assertDiv.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-semibold text-gray-700">断言 ${index + 1}</span>
+                    <button onclick="removeAssert(this)" class="text-red-500 hover:text-red-700 text-sm">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select class="assert-type w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                        <option value="equals" ${assert && assert.assert_type === 'equals' ? 'selected' : ''}>等于</option>
+                        <option value="contains" ${assert && assert.assert_type === 'contains' ? 'selected' : ''}>包含</option>
+                        <option value="not_equals" ${assert && assert.assert_type === 'not_equals' ? 'selected' : ''}>不等于</option>
+                        <option value="greater_than" ${assert && assert.assert_type === 'greater_than' ? 'selected' : ''}>大于</option>
+                        <option value="less_than" ${assert && assert.assert_type === 'less_than' ? 'selected' : ''}>小于</option>
+                    </select>
+                    <input type="text" placeholder="断言字段" value="${assert ? assert.assert_field : ''}" class="assert-field w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <input type="text" placeholder="期望值" value="${assert ? assert.expected_value || '' : ''}" class="assert-expected-value w-full px-3 py-2 border border-gray-300 rounded text-sm" colspan="2">
+                </div>
+            `;
+            container.appendChild(assertDiv);
+        }
+
+        function addEditAssert() {
+            const container = document.getElementById('edit_asserts_container');
+            const index = container.children.length;
+            addAssertToEditModal(null, index);
+        }
+
+        function removeAssert(btn) {
+            btn.closest('.bg-purple-50').remove();
+            // 重新编号
+            const asserts = document.querySelectorAll('#edit_asserts_container > div');
+            asserts.forEach((assert, idx) => {
+                assert.querySelector('span').textContent = `断言 ${idx + 1}`;
+            });
+        }
+
+        // 保存编辑的用例
+        function saveEditCase() {
+            const index = parseInt(document.getElementById('edit_case_index').value);
+
+            // 收集步骤数据
+            const steps = [];
+            const stepElements = document.querySelectorAll('#edit_steps_container > div');
+            stepElements.forEach((stepEl, idx) => {
+                steps.push({
+                    step_number: parseInt(stepEl.querySelector('.step-number').value) || idx + 1,
+                    step_description: stepEl.querySelector('.step-description').value,
+                    expected_result: stepEl.querySelector('.step-expected-result').value
+                });
+            });
+
+            // 收集断言数据
+            const asserts = [];
+            const assertElements = document.querySelectorAll('#edit_asserts_container > div');
+            assertElements.forEach((assertEl) => {
+                asserts.push({
+                    assert_type: assertEl.querySelector('.assert-type').value,
+                    assert_field: assertEl.querySelector('.assert-field').value,
+                    expected_value: assertEl.querySelector('.assert-expected-value').value
+                });
+            });
+
+            // 更新用例数据
+            generatedCases[index] = {
+                ...generatedCases[index],
+                name: document.getElementById('edit_name').value,
+                hoster_name: document.getElementById('edit_hoster_name').value,
+                case_tag: document.getElementById('edit_case_tag').value,
+                annotation: document.getElementById('edit_annotation').value,
+                case_setup: document.getElementById('edit_case_setup').value,
+                case_teardown: document.getElementById('edit_case_teardown').value,
+                case_steps: steps,
+                case_asserts: asserts
+            };
+
+            // 刷新显示
+            displayGeneratedCases(generatedCases);
+            closeEditModal();
+        }
+
+        // 删除用例
+        function deleteCase(index) {
+            if (confirm(`确定要删除测试用例 "${generatedCases[index].name}" 吗？`)) {
+                generatedCases.splice(index, 1);
+                displayGeneratedCases(generatedCases);
+            }
         }
 
         // 确认创建用例
