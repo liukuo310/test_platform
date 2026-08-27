@@ -73,6 +73,120 @@
                                style="grid-column: span 2;">
                     </div>
                 </div>
+
+                <!-- 施压服务器监控配置（新增） -->
+                <div id="stressServerSection" class="border-t border-gray-200 pt-4 mb-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">
+                        <i class="fas fa-bolt mr-2 text-yellow-600"></i>施压服务器监控（可选）
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                        <input type="text" id="stressServerIp" placeholder="施压服务器IP (如: 192.168.1.100)"
+                               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                        <input type="text" id="stressServerUser" placeholder="用户名 (如: root)"
+                               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                        <input type="password" id="stressServerPassword" placeholder="SSH密码"
+                               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                    </div>
+
+                    <!-- 接口配置区域 -->
+                    <div id="apiConfigSection" class="hidden mt-3 mb-3">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-semibold text-gray-800">
+                                    <i class="fas fa-cog mr-2 text-blue-600"></i>配置要监控的接口
+                                </h4>
+                                <button onclick="addApiConfigRow()"
+                                        class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-plus mr-1"></i>添加接口
+                                </button>
+                            </div>
+                            <div id="apiConfigContainer" class="space-y-2">
+                                <!-- 动态添加接口配置行 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 施压服务器实时统计表 -->
+                    <div id="stressMonitorTable" class="hidden mt-4">
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-lg p-4 shadow-md">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-base font-bold text-gray-800">
+                                    <i class="fas fa-chart-bar mr-2 text-yellow-700"></i>施压服务器实时请求统计
+                                </h4>
+                                <div class="flex items-center space-x-2">
+                                    <span class="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    <span class="text-xs text-gray-600">实时监控中</span>
+                                </div>
+                            </div>
+
+                            <!-- 总体统计卡片 -->
+                            <div class="grid grid-cols-4 gap-3 mb-4">
+                                <div class="bg-white rounded-lg p-3 border-l-4 border-blue-500">
+                                    <p class="text-xs text-gray-600 mb-1">总并发数</p>
+                                    <p id="totalConcurrency" class="text-2xl font-bold text-blue-600">--</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 border-l-4 border-green-500">
+                                    <p class="text-xs text-gray-600 mb-1">总请求数</p>
+                                    <p id="totalRequests" class="text-2xl font-bold text-green-600">--</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 border-l-4 border-purple-500">
+                                    <p class="text-xs text-gray-600 mb-1">平均响应时间</p>
+                                    <p id="avgResponseTime" class="text-2xl font-bold text-purple-600">-- ms</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 border-l-4 border-red-500">
+                                    <p class="text-xs text-gray-600 mb-1">失败请求数</p>
+                                    <p id="failedRequests" class="text-2xl font-bold text-red-600">--</p>
+                                </div>
+                            </div>
+
+                            <!-- 各接口详细统计表 -->
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 bg-white rounded-lg overflow-hidden">
+                                    <thead class="bg-gradient-to-r from-yellow-100 to-orange-100">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                                <i class="fas fa-tag mr-1"></i>接口名称
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                                <i class="fas fa-link mr-1"></i>接口URL
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                                <i class="fas fa-tachometer-alt mr-1"></i>当前并发数
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                                <i class="fas fa-exchange-alt mr-1"></i>发送请求数
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                                <i class="fas fa-clock mr-1"></i>平均响应时间
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>失败数
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stressTableBody" class="divide-y divide-gray-200">
+                                        <!-- 动态填充各接口数据 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-3">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                此表格显示施压服务器对每个配置接口的实际发送请求数和性能指标
+                            </p>
+                            <!-- 并发数折线图 -->
+                            <div class="mt-4 bg-white rounded-lg p-4 border border-yellow-200">
+                                <h4 class="text-sm font-semibold text-gray-800 mb-3">
+                                    <i class="fas fa-chart-line mr-2 text-yellow-600"></i>并发数趋势图
+                                </h4>
+                                <div style="height: 300px;">
+                                    <canvas id="concurrencyChart"></canvas>
+                                </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
             </div>
 
             <!-- 数据类型选择 -->
@@ -238,18 +352,320 @@
         let durationTimer = null;
         const charts = {};
         const maxDataPoints = 50; // 最多显示50个数据点
+        let stressServerMonitorActive = false; // 施压服务器监控激活状态
+        let stressMonitorTimer = null; // 施压服务器监控定时器
+        let apiConfigList = []; // 接口配置列表
+        let concurrencyChart = null; // 并发数图表实例
+        let isCollecting = false; // 标记是否正在采集
+
+
+        // 检查施压服务器配置并显示监控表格
+        function checkStressServerMonitor() {
+            const mode = document.querySelector('input[name="collectMode"]:checked').value;
+            const stressServerSection = document.getElementById('stressServerSection');
+            const apiConfigSection = document.getElementById('apiConfigSection');
+            const stressMonitorTable = document.getElementById('stressMonitorTable');
+
+            // 只有在远程模式下才显示
+            if (mode === 'remote') {
+                // 显示接口配置区域和监控表格
+                apiConfigSection.classList.remove('hidden');
+                stressMonitorTable.classList.remove('hidden');
+
+                const existingRows = document.querySelectorAll('#apiConfigContainer > div');
+                if (existingRows.length === 0) {
+                    addApiConfigRow();
+                }
+
+                initConcurrencyChart();
+            } else {
+                // 本机模式下隐藏
+                apiConfigSection.classList.add('hidden');
+                stressMonitorTable.classList.add('hidden');
+            }
+        }
+
+        // 添加接口配置行
+        function addApiConfigRow() {
+            const container = document.getElementById('apiConfigContainer');
+            const rowId = 'api-row-' + Date.now();
+
+            const rowDiv = document.createElement('div');
+            rowDiv.id = rowId;
+            rowDiv.className = 'flex items-center space-x-2 bg-white p-2 rounded border border-blue-200';
+            rowDiv.innerHTML = `
+                <input type="text" placeholder="接口名称 (如: 登录)"
+                       class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 api-name-input">
+                <input type="text" placeholder="接口路径 (如: /api/login)"
+                       class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 api-path-input">
+                <button onclick="removeApiConfigRow('${rowId}')"
+                        class="px-2 py-1 text-red-600 hover:text-red-800 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+
+            container.appendChild(rowDiv);
+
+            // 更新配置列表
+            updateApiConfigList();
+        }
+
+        // 删除接口配置行
+        function removeApiConfigRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+                updateApiConfigList();
+            }
+        }
+
+        // 更新接口配置列表
+        function updateApiConfigList() {
+            const rows = document.querySelectorAll('#apiConfigContainer > div');
+            apiConfigList = [];
+
+            console.log('=== 开始更新接口配置列表 ===');
+            console.log('找到配置行数:', rows.length);
+
+            rows.forEach((row, index) => {
+                const nameInput = row.querySelector('.api-name-input');
+                const pathInput = row.querySelector('.api-path-input');
+
+                const name = nameInput.value.trim();
+                const path = pathInput.value.trim();
+
+                console.log(`第${index + 1}行 - 名称: "${name}", 路径: "${path}"`);
+
+                if (name && path) {
+                    apiConfigList.push({
+                        name: name,
+                        path: path
+                    });
+                }
+            });
+
+
+            console.log('有效接口配置数量:', apiConfigList.length);
+            console.log('施压服务器IP:', document.getElementById('stressServerIp').value.trim());
+
+            // 重新初始化表格行（根据有效接口数量）
+            initStressTableRows();
+
+        }
+
+
+        // 初始化施压服务器表格行
+        function initStressTableRows() {
+            const tbody = document.getElementById('stressTableBody');
+            tbody.innerHTML = '';
+
+            // 如果有接口配置，按接口配置生成行
+            if (apiConfigList.length > 0) {
+                apiConfigList.forEach((api, index) => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50 transition-colors';
+                    row.id = 'stress-row-' + index;
+                    row.innerHTML = `                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-800">${api.name}</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="text-sm font-mono text-gray-600">${api.path}</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span id="concurrency-${index}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-800">
+                                --
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span id="requests-${index}" class="text-sm font-semibold text-gray-800">--</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span id="response-time-${index}" class="text-sm text-gray-700">-- ms</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span id="failed-${index}" class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">
+                                --
+                            </span>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                // 如果没有接口配置，显示一个提示行
+                const row = document.createElement('tr');
+                row.innerHTML = `                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        请在上方配置要监控的接口，或直接查看总体统计数据
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        // 启动施压服务器监控
+        function startStressMonitor(ip, user, password) {
+            // 立即获取一次数据
+            fetchStressServerData(ip, user, password);
+
+            // 设置定时器，每3秒更新一次
+            if (stressMonitorTimer) {
+                clearInterval(stressMonitorTimer);
+            }
+            stressMonitorTimer = setInterval(() => {
+                fetchStressServerData(ip, user, password);
+            }, 3000);
+        }
+
+        // 停止施压服务器监控
+        function stopStressMonitor() {
+            if (stressMonitorTimer) {
+                clearInterval(stressMonitorTimer);
+                stressMonitorTimer = null;
+            }
+        }
+
+        // 获取施压服务器数据
+        async function fetchStressServerData(ip, user, password) {
+            try {
+                console.log('开始请求施压服务器数据:', {
+                    ip: ip,
+                    user: user,
+                    api_list: apiConfigList
+                });
+
+                const response = await fetch('/performance/stress/monitor', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        stress_server_ip: ip,
+                        stress_server_user: user,
+                        stress_server_password: password,
+                        api_list: apiConfigList
+                    })
+                });
+
+                const result = await response.json();
+                console.log('施压服务器响应:', result);
+
+                if (result.status === 'success' && result.data) {
+                    updateStressMonitorTable(result.data);
+                } else {
+                    console.error('施压服务器返回错误:', result.message);
+                }
+            } catch (error) {
+                console.error('获取施压服务器数据失败:', error);
+            }
+        }
+
+        // 更新施压服务器监控表格
+        function updateStressMonitorTable(data) {
+            // 更新总体统计
+            if (data.summary) {
+                const totalConcurrencyElem = document.getElementById('totalConcurrency');
+                if (data.summary.total_concurrency !== undefined) {
+                    totalConcurrencyElem.textContent = data.summary.total_concurrency;
+                }
+
+                const totalRequestsElem = document.getElementById('totalRequests');
+                if (data.summary.total_requests !== undefined) {
+                    totalRequestsElem.textContent = data.summary.total_requests.toLocaleString();
+                }
+
+                const avgResponseTimeElem = document.getElementById('avgResponseTime');
+                if (data.summary.avg_response_time !== undefined) {
+                    avgResponseTimeElem.textContent = data.summary.avg_response_time.toFixed(0) + ' ms';
+                }
+
+                const failedRequestsElem = document.getElementById('failedRequests');
+                if (data.summary.failed_requests !== undefined) {
+                    failedRequestsElem.textContent = data.summary.failed_requests;
+                }
+            }
+
+            // 更新各接口详细数据
+            if (data.api_stats && Array.isArray(data.api_stats)) {
+                data.api_stats.forEach((stat, index) => {
+                    // 更新并发数
+                    const concurrencyElem = document.getElementById(`concurrency-${index}`);
+                    if (concurrencyElem && stat.concurrency !== undefined) {
+                        concurrencyElem.textContent = stat.concurrency;
+                        // 根据并发数改变颜色
+                        if (stat.concurrency > 1000) {
+                            concurrencyElem.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800';
+                        } else if (stat.concurrency > 500) {
+                            concurrencyElem.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-800';
+                        } else {
+                            concurrencyElem.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 text-blue-800';
+                        }
+                    }
+
+                    // 更新请求数
+                    const requestsElem = document.getElementById(`requests-${index}`);
+                    if (requestsElem && stat.total_requests !== undefined) {
+                        requestsElem.textContent = stat.total_requests.toLocaleString();
+                    }
+
+                    // 更新响应时间
+                    const responseTimeElem = document.getElementById(`response-time-${index}`);
+                    if (responseTimeElem && stat.avg_response_time !== undefined) {
+                        responseTimeElem.textContent = stat.avg_response_time.toFixed(0) + ' ms';
+                    }
+
+                    // 更新失败数
+                    const failedElem = document.getElementById(`failed-${index}`);
+                    if (failedElem && stat.failed_requests !== undefined) {
+                        failedElem.textContent = stat.failed_requests;
+                        if (stat.failed_requests > 0) {
+                            failedElem.className = 'inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800';
+                        } else {
+                            failedElem.className = 'inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800';
+                        }
+                    }
+                });
+            }
+
+            // 更新并发数图表
+            if (data.concurrency_history) {
+                updateConcurrencyChart(data.concurrency_history);
+            }
+        }
 
         // 切换采集模式
         function toggleMode() {
             const mode = document.querySelector('input[name="collectMode"]:checked').value;
             const remoteConfig = document.getElementById('remoteConfig');
+            const stressServerSection = document.getElementById('stressServerSection');
 
             if (mode === 'remote') {
                 remoteConfig.classList.remove('hidden');
+                stressServerSection.classList.remove('hidden');
+
+                // 立即显示施压服务器表格
+                checkStressServerMonitor();
             } else {
                 remoteConfig.classList.add('hidden');
+                stressServerSection.classList.add('hidden');
+
+                // 清空施压服务器输入框
+                document.getElementById('stressServerIp').value = '';
+                document.getElementById('stressServerUser').value = '';
+                document.getElementById('stressServerPassword').value = '';
+
+                // 隐藏相关区域
+                document.getElementById('apiConfigSection').classList.add('hidden');
+                document.getElementById('stressMonitorTable').classList.add('hidden');
+
+                // 停止监控
+                stopStressMonitor();
+
+                // 销毁并发数图表
+                if (concurrencyChart) {
+                    concurrencyChart.destroy();
+                    concurrencyChart = null;
+                }
             }
         }
+
 
         // 初始化图表
         function initChart(chartId, label, color, yAxisLabel) {
@@ -313,6 +729,151 @@
                 }
             });
         }
+
+                // 初始化并发数图表
+        function initConcurrencyChart() {
+            if (concurrencyChart) {
+                return; // 已存在则不重复创建
+            }
+
+            const ctx = document.getElementById('concurrencyChart').getContext('2d');
+            concurrencyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '时间'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '并发数'
+                            },
+                            beginAtZero: true
+                        }
+                    },
+                    animation: {
+                        duration: 300
+                    }
+                }
+            });
+        }
+
+
+        // 更新并发数图表
+        function updateConcurrencyChart(historyData) {
+            if (!concurrencyChart) {
+                initConcurrencyChart();
+            }
+
+            const newTimestamp = historyData.timestamps[0];
+            const newTotalConcurrency = historyData.total_concurrency[0];
+            const apiConcurrency = historyData.api_concurrency || [];
+
+            // 添加新的时间戳
+            concurrencyChart.data.labels.push(newTimestamp);
+
+            // 限制数据点数量（保留最近50个点）
+            const maxPoints = 50;
+            if (concurrencyChart.data.labels.length > maxPoints) {
+                concurrencyChart.data.labels.shift();
+            }
+
+            // 构建或更新数据集
+            const datasets = [];
+
+            // 查找或创建总并发数数据集
+            let totalDataset = concurrencyChart.data.datasets.find(ds => ds.label === '总并发数');
+            if (!totalDataset) {
+                totalDataset = {
+                    label: '总并发数',
+                    data: [],
+                    borderColor: '#f59e0b',
+                    backgroundColor: '#f59e0b20',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    order: 0
+                };
+                concurrencyChart.data.datasets.push(totalDataset);
+            }
+
+            // 添加新的总并发数数据点
+            totalDataset.data.push(newTotalConcurrency);
+            if (totalDataset.data.length > maxPoints) {
+                totalDataset.data.shift();
+            }
+            datasets.push(totalDataset);
+
+            // 处理各个接口的并发数曲线
+            const colors = ['#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#f97316'];
+
+            apiConcurrency.forEach((api, index) => {
+                const color = colors[index % colors.length];
+
+                // 查找或创建该接口的数据集
+                let apiDataset = concurrencyChart.data.datasets.find(ds => ds.label === api.name);
+                if (!apiDataset) {
+                    apiDataset = {
+                        label: api.name,
+                        data: [],
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 4,
+                        order: 1
+                    };
+                    concurrencyChart.data.datasets.push(apiDataset);
+                }
+
+                // 添加新的数据点
+                const newValue = api.data[0] || 0;
+                apiDataset.data.push(newValue);
+                if (apiDataset.data.length > maxPoints) {
+                    apiDataset.data.shift();
+                }
+                datasets.push(apiDataset);
+            });
+
+            concurrencyChart.data.datasets = datasets;
+            concurrencyChart.update('none');
+        }
+
+
+
 
         // 更新图表可见性
         function updateChartVisibility() {
@@ -380,6 +941,18 @@
 
                 if (result.status !== 'success') {
                     throw new Error(result.message);
+                }
+
+                // 设置采集状态为true
+                isCollecting = true;
+
+                // 检查并启动施压服务器监控
+                const stressIp = document.getElementById('stressServerIp').value.trim();
+                const stressUser = document.getElementById('stressServerUser').value.trim();
+                const stressPassword = document.getElementById('stressServerPassword').value.trim();
+
+                if (stressIp && stressUser && stressPassword) {
+                    startStressMonitor(stressIp, stressUser, stressPassword);
                 }
 
                 // 初始化图表
@@ -529,6 +1102,7 @@
             }
         }
 
+
         // 停止采集
         async function stopCollect() {
             if (collectTimer) {
@@ -541,6 +1115,12 @@
                 durationTimer = null;
             }
 
+            // 设置采集状态为false
+            isCollecting = false;
+
+            // 停止施压服务器监控
+            stopStressMonitor();
+
             try {
                 await fetch('/performance/service/stop', { method: 'POST' });
             } catch (error) {
@@ -552,7 +1132,11 @@
             document.getElementById('stopBtn').disabled = true;
             document.getElementById('stopBtn').classList.add('opacity-50', 'cursor-not-allowed');
             document.getElementById('statusText').textContent = '已停止';
+
+            // 调用checkStressServerMonitor来保持表格显示（如果已填写IP账号密码）
+            checkStressServerMonitor();
         }
+
 
         // 清空数据
         function clearData() {
@@ -574,17 +1158,37 @@
             document.getElementById('netRecv').textContent = '--';
         }
 
+
         // 页面加载完成
         document.addEventListener('DOMContentLoaded', function() {
+            const stressIpInput = document.getElementById('stressServerIp');
+            const stressUserInput = document.getElementById('stressServerUser');
+            const stressPasswordInput = document.getElementById('stressServerPassword');
+
+            if (stressIpInput && stressUserInput && stressPasswordInput) {
+                stressIpInput.addEventListener('input', checkStressServerMonitor);
+                stressUserInput.addEventListener('input', checkStressServerMonitor);
+                stressPasswordInput.addEventListener('input', checkStressServerMonitor);
+            }
+
+            // 初始化：根据当前选中的模式显示/隐藏配置区域
+            const currentMode = document.querySelector('input[name="collectMode"]:checked').value;
+            const remoteConfig = document.getElementById('remoteConfig');
+            const stressServerSection = document.getElementById('stressServerSection');
+
+            if (currentMode === 'local') {
+                // 默认选中本机采集，隐藏所有服务器配置
+                remoteConfig.classList.add('hidden');
+                stressServerSection.classList.add('hidden');
+            } else {
+                // 如果默认是远程模式，显示配置区域
+                remoteConfig.classList.remove('hidden');
+                stressServerSection.classList.remove('hidden');
+            }
+
             updateChartVisibility();
         });
 
-        // 页面关闭时清理
-        window.addEventListener('beforeunload', function() {
-            if (collectTimer) {
-                stopCollect();
-            }
-        });
     </script>
 </body>
 </html>

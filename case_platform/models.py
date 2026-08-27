@@ -10,7 +10,7 @@ class TestCase(models.Model):
     case_setup = models.CharField(max_length=60, verbose_name="用例前置条件", null=True)
     case_teardown = models.CharField(max_length=60, verbose_name="用例后置条件", null=True)
     case_steps = models.JSONField(verbose_name="用例步骤", null=True, blank=True, default=list)
-    case_asserts = models.JSONField(verbose_name="用例断言", null=True, blank=True, default=list)
+    case_asserts = models.CharField(max_length=1000, verbose_name="用例断言", null=True)
     exec_status = models.JSONField(verbose_name="用例执行状态", null=True, blank=True, default=dict)
     update_time = models.DateTimeField(auto_now=True, verbose_name="更新时间")
     create_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")

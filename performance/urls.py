@@ -3,7 +3,7 @@ from django.urls import path
 from performance.views.client_views import performance_main_view, get_device_info, select_test_template, \
     get_android_performance_info, get_phone_message, result_report, get_ios_sq_info, ios_collect
 from performance.views.service_views import service_performance_main, service_performance, \
-    init_performance_conf, get_performance_data, stop_performance_collect
+    init_performance_conf, get_performance_data, stop_performance_collect, monitor_stress_server
 
 urlpatterns = [
     path('performance_main', service_performance_main, name="service_performance_main"),
@@ -23,4 +23,6 @@ urlpatterns = [
     path('service/init', init_performance_conf, name="init_performance_conf"),
     path('service/collect', get_performance_data, name="get_performance_data"),
     path('service/stop', stop_performance_collect, name="stop_performance_collect"),
+    # 施压服务器监控接口（新增）
+    path('stress/monitor', monitor_stress_server, name="monitor_stress_server"),
 ]

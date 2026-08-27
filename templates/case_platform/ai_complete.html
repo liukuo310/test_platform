@@ -121,6 +121,16 @@
                 <input type="password" id="api_key_input" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-base" placeholder="如果不配置，将使用系统默认 API Key">
             </div>
 
+            <div class="mb-6">
+                <label for="code_url_input" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-code text-blue-600 mr-1"></i>代码地址或代码片段（可选）
+                </label>
+                <textarea id="code_url_input" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-base font-mono text-sm" placeholder="例如：&#10;Git 仓库地址：https://github.com/user/repo.git&#10;或&#10;直接粘贴代码片段：&#10;def login(username, password):&#10;    if not username or not password:&#10;        return {'error': '账号密码不能为空'}&#10;    ..."></textarea>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>提供代码后，AI 将分析代码逻辑，生成覆盖率更高的测试用例
+                </p>
+            </div>
+
             <div class="flex justify-end gap-4">
                 <button onclick="window.location.href='/test_case/case_main/'" class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200 flex items-center gap-2">
                     <i class="fas fa-arrow-left"></i> 返回
@@ -241,14 +251,9 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-check-circle text-purple-600 mr-1"></i>断言规则
+                        <i class="fas fa-check-circle text-purple-600 mr-1"></i>预期结果
                     </label>
-                    <div id="edit_asserts_container" class="space-y-3">
-                        <!-- 动态插入断言输入框 -->
-                    </div>
-                    <button onclick="addEditAssert()" class="mt-3 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm transition">
-                        <i class="fas fa-plus mr-1"></i>添加断言
-                    </button>
+                    <textarea id="edit_case_asserts" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="请输入预期结果描述..."></textarea>
                 </div>
             </div>
 
@@ -296,6 +301,11 @@
                     requestBody.api_key = apiKey;
                 }
 
+                const codeUrl = document.getElementById('code_url_input').value.trim();
+                if (codeUrl) {
+                    requestBody.code_url = codeUrl;
+                }
+
                 const response = await fetch('/test_case/generate_test_case/', {
                     method: 'POST',
                     headers: {
@@ -327,15 +337,24 @@
             const container = document.getElementById('generated_cases_list');
             const countElement = document.getElementById('generated_count');
 
+            if (!cases || !Array.isArray(cases)) {
+                console.error('用例数据无效:', cases);
+                showError('用例数据格式错误');
+                return;
+            }
+
             countElement.textContent = cases.length;
             container.innerHTML = '';
 
             cases.forEach((testCase, index) => {
-                const caseCard = createCaseCard(testCase, index);
-                container.appendChild(caseCard);
+                try {
+                    const caseCard = createCaseCard(testCase, index);
+                    container.appendChild(caseCard);
+                } catch (error) {
+                    console.error(`渲染用例 ${index} 失败:`, error);
+                }
             });
         }
-
         // 创建用例卡片
         function createCaseCard(testCase, index) {
             const card = document.createElement('div');
@@ -351,12 +370,14 @@
                 : '<p class="text-sm text-gray-500">暂无步骤信息</p>';
 
             const assertsHtml = testCase.case_asserts && testCase.case_asserts.length > 0
-                ? testCase.case_asserts.map(assert => `
-                    <div class="inline-block bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full mr-2 mb-1">
-                        <i class="fas fa-check-double mr-1"></i>${assert.assert_type}: ${assert.assert_field}
-                    </div>
-                `).join('')
-                : '<p class="text-sm text-gray-500">暂无断言信息</p>';
+                ? (Array.isArray(testCase.case_asserts)
+                    ? testCase.case_asserts.map(assert => `
+                        <div class="inline-block bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full mr-2 mb-1">
+                            <i class="fas fa-check-double mr-1"></i>${assert.assert_type}: ${assert.assert_field}
+                        </div>
+                    `).join('')
+                    : `<div class="text-sm text-gray-700">${testCase.case_asserts}</div>`)
+                : '<p class="text-sm text-gray-500">暂无预期结果</p>';
 
             card.innerHTML = `
                 <div class="absolute top-4 right-4 flex gap-2">
@@ -410,7 +431,7 @@
 
                 <div class="mb-3">
                     <h4 class="text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-check-circle text-purple-600 mr-1"></i>断言规则
+                        <i class="fas fa-check-circle text-purple-600 mr-1"></i>预期结果
                     </h4>
                     <div>
                         ${assertsHtml}
@@ -437,6 +458,7 @@
             document.getElementById('edit_annotation').value = testCase.annotation || '';
             document.getElementById('edit_case_setup').value = testCase.case_setup || '';
             document.getElementById('edit_case_teardown').value = testCase.case_teardown || '';
+            document.getElementById('edit_case_asserts').value = testCase.case_asserts || '';
 
             // 渲染步骤
             const stepsContainer = document.getElementById('edit_steps_container');
@@ -447,17 +469,6 @@
                 });
             } else {
                 addStepToEditModal(null, 0);
-            }
-
-            // 渲染断言
-            const assertsContainer = document.getElementById('edit_asserts_container');
-            assertsContainer.innerHTML = '';
-            if (testCase.case_asserts && testCase.case_asserts.length > 0) {
-                testCase.case_asserts.forEach((assert, assertIndex) => {
-                    addAssertToEditModal(assert, assertIndex);
-                });
-            } else {
-                addAssertToEditModal(null, 0);
             }
 
             // 显示弹窗
@@ -505,48 +516,6 @@
             });
         }
 
-        // 添加断言到编辑弹窗
-        function addAssertToEditModal(assert = null, index = 0) {
-            const container = document.getElementById('edit_asserts_container');
-            const assertDiv = document.createElement('div');
-            assertDiv.className = 'bg-purple-50 border border-purple-200 rounded-lg p-3';
-            assertDiv.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm font-semibold text-gray-700">断言 ${index + 1}</span>
-                    <button onclick="removeAssert(this)" class="text-red-500 hover:text-red-700 text-sm">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <select class="assert-type w-full px-3 py-2 border border-gray-300 rounded text-sm">
-                        <option value="equals" ${assert && assert.assert_type === 'equals' ? 'selected' : ''}>等于</option>
-                        <option value="contains" ${assert && assert.assert_type === 'contains' ? 'selected' : ''}>包含</option>
-                        <option value="not_equals" ${assert && assert.assert_type === 'not_equals' ? 'selected' : ''}>不等于</option>
-                        <option value="greater_than" ${assert && assert.assert_type === 'greater_than' ? 'selected' : ''}>大于</option>
-                        <option value="less_than" ${assert && assert.assert_type === 'less_than' ? 'selected' : ''}>小于</option>
-                    </select>
-                    <input type="text" placeholder="断言字段" value="${assert ? assert.assert_field : ''}" class="assert-field w-full px-3 py-2 border border-gray-300 rounded text-sm">
-                    <input type="text" placeholder="期望值" value="${assert ? assert.expected_value || '' : ''}" class="assert-expected-value w-full px-3 py-2 border border-gray-300 rounded text-sm" colspan="2">
-                </div>
-            `;
-            container.appendChild(assertDiv);
-        }
-
-        function addEditAssert() {
-            const container = document.getElementById('edit_asserts_container');
-            const index = container.children.length;
-            addAssertToEditModal(null, index);
-        }
-
-        function removeAssert(btn) {
-            btn.closest('.bg-purple-50').remove();
-            // 重新编号
-            const asserts = document.querySelectorAll('#edit_asserts_container > div');
-            asserts.forEach((assert, idx) => {
-                assert.querySelector('span').textContent = `断言 ${idx + 1}`;
-            });
-        }
-
         // 保存编辑的用例
         function saveEditCase() {
             const index = parseInt(document.getElementById('edit_case_index').value);
@@ -562,17 +531,6 @@
                 });
             });
 
-            // 收集断言数据
-            const asserts = [];
-            const assertElements = document.querySelectorAll('#edit_asserts_container > div');
-            assertElements.forEach((assertEl) => {
-                asserts.push({
-                    assert_type: assertEl.querySelector('.assert-type').value,
-                    assert_field: assertEl.querySelector('.assert-field').value,
-                    expected_value: assertEl.querySelector('.assert-expected-value').value
-                });
-            });
-
             // 更新用例数据
             generatedCases[index] = {
                 ...generatedCases[index],
@@ -583,12 +541,16 @@
                 case_setup: document.getElementById('edit_case_setup').value,
                 case_teardown: document.getElementById('edit_case_teardown').value,
                 case_steps: steps,
-                case_asserts: asserts
+                case_asserts: document.getElementById('edit_case_asserts').value
             };
 
-            // 刷新显示
-            displayGeneratedCases(generatedCases);
-            closeEditModal();
+            try {
+                displayGeneratedCases(generatedCases);
+                closeEditModal();
+            } catch (error) {
+                console.error('刷新显示失败:', error);
+                alert('保存成功，但刷新显示时出错：' + error.message);
+            }
         }
 
         // 删除用例

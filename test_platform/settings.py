@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'api_platform.apps.ApiPlatformConfig',
     # 用例平台
     'case_platform.apps.CasePlatformConfig',
-
+    # 业务后台
+    'feature_platform.apps.FeaturePlatformConfig'
 ]
 
 MIDDLEWARE = [

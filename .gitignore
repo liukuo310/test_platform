@@ -130,4 +130,5 @@ dmypy.json
 .idea
 plat/migrations/
 api_platform/migrations/
+case_platform/migrations/
 mianshi.py

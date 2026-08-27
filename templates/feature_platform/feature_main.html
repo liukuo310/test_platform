@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业务功能后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+        }
+
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 font-sans min-h-screen">
+
+    <!-- 顶部导航 -->
+    <header class="bg-gradient-to-r from-green-600 to-teal-600 text-white py-6 shadow-lg">
+        <div class="container mx-auto px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">
+                        <i class="fas fa-briefcase mr-3"></i>业务功能后台
+                    </h1>
+                    <p class="mt-2 text-sm opacity-90">业务功能管理与配置中心</p>
+                </div>
+                <a href="/test_plat/main_view/" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition">
+                    <i class="fas fa-arrow-left mr-2"></i>返回首页
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto py-8 px-6">
+
+        <!-- 功能卡片网格 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+            <!-- 功能模块1：用户等级调节 -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-user-cog text-2xl text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">用户等级调节</h2>
+                        <p class="text-sm text-gray-600">调整用户VIP等级和权限</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-id-card mr-1 text-blue-500"></i>用户 UID
+                        </label>
+                        <input type="number" id="user_level_uid" placeholder="请输入用户UID"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-star mr-1 text-yellow-500"></i>目标等级
+                        </label>
+                        <select id="user_level_value" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">请选择等级</option>
+                            <option value="1">普通用户 (LV1)</option>
+                            <option value="2">白银会员 (LV2)</option>
+                            <option value="3">黄金会员 (LV3)</option>
+                            <option value="4">铂金会员 (LV4)</option>
+                            <option value="5">钻石会员 (LV5)</option>
+                            <option value="6">至尊会员 (LV6)</option>
+                        </select>
+                    </div>
+
+                    <button onclick="updateUserLevel()" id="level_update_btn"
+                            class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2 px-4 rounded-lg transition shadow-md">
+                        <i class="fas fa-paper-plane mr-2"></i>提交修改
+                    </button>
+                </div>
+            </div>
+
+            <!-- 功能模块2：用户积分管理 -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-coins text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">用户积分管理</h2>
+                        <p class="text-sm text-gray-600">增减用户积分余额</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-id-card mr-1 text-green-500"></i>用户 UID
+                        </label>
+                        <input type="number" id="points_uid" placeholder="请输入用户UID"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-plus-minus mr-1 text-green-500"></i>积分变动
+                        </label>
+                        <input type="number" id="points_value" placeholder="正数增加，负数减少"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="updateUserPoints()" id="points_update_btn"
+                                class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-2 px-4 rounded-lg transition shadow-md">
+                            <i class="fas fa-check mr-2"></i>确认修改
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 功能模块3：账号状态管理 -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-user-lock text-2xl text-red-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">账号状态管理</h2>
+                        <p class="text-sm text-gray-600">封禁或解封用户账号</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-id-card mr-1 text-red-500"></i>用户 UID
+                        </label>
+                        <input type="number" id="ban_uid" placeholder="请输入用户UID"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-toggle-on mr-1 text-red-500"></i>操作类型
+                        </label>
+                        <select id="ban_action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <option value="">请选择操作</option>
+                            <option value="ban">封禁账号</option>
+                            <option value="unban">解封账号</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-comment mr-1 text-red-500"></i>封禁原因（可选）
+                        </label>
+                        <textarea id="ban_reason" rows="2" placeholder="请输入封禁原因"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                    </div>
+
+                    <button onclick="updateUserStatus()" id="ban_update_btn"
+                            class="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-2 px-4 rounded-lg transition shadow-md">
+                        <i class="fas fa-shield-alt mr-2"></i>执行操作
+                    </button>
+                </div>
+            </div>
+
+            <!-- 功能模块4：批量操作 -->
+            <div class="feature-card bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-layer-group text-2xl text-purple-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">批量操作</h2>
+                        <p class="text-sm text-gray-600">批量处理用户数据</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-list mr-1 text-purple-500"></i>UID 列表
+                        </label>
+                        <textarea id="batch_uids" rows="3" placeholder="每行一个UID，例如：&#10;1001&#10;1002&#10;1003"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-cogs mr-1 text-purple-500"></i>批量操作类型
+                        </label>
+                        <select id="batch_action" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">请选择操作</option>
+                            <option value="send_notification">发送通知</option>
+                            <option value="reset_password">重置密码</option>
+                            <option value="clear_cache">清理缓存</option>
+                        </select>
+                    </div>
+
+                    <button onclick="batchOperation()" id="batch_btn"
+                            class="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white py-2 px-4 rounded-lg transition shadow-md">
+                        <i class="fas fa-play mr-2"></i>开始批量处理
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 操作日志区域 -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-800">
+                    <i class="fas fa-history mr-2 text-gray-600"></i>操作记录
+                </h3>
+                <button onclick="clearLogs()" class="text-sm text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-trash mr-1"></i>清空记录
+                </button>
+            </div>
+            <div id="operation_logs" class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                <p class="text-sm text-gray-500 text-center">暂无操作记录</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 提示消息弹窗 -->
+    <div id="message_modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 fade-in">
+            <div id="modal_content">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加操作日志
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('operation_logs');
+            const timestamp = new Date().toLocaleString('zh-CN');
+
+            const logColors = {
+                'success': 'bg-green-100 border-l-4 border-green-500 text-green-800',
+                'error': 'bg-red-100 border-l-4 border-red-500 text-red-800',
+                'warning': 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800',
+                'info': 'bg-blue-100 border-l-4 border-blue-500 text-blue-800'
+            };
+
+            const logIcons = {
+                'success': 'fa-check-circle',
+                'error': 'fa-times-circle',
+                'warning': 'fa-exclamation-triangle',
+                'info': 'fa-info-circle'
+            };
+
+            if (logsContainer.querySelector('p')) {
+                logsContainer.innerHTML = '';
+            }
+
+            const logEntry = document.createElement('div');
+            logEntry.className = `${logColors[type]} p-3 mb-2 rounded`;
+            logEntry.innerHTML = `
+                <div class="flex items-start">
+                    <i class="fas ${logIcons[type]} mr-2 mt-0.5"></i>
+                    <div class="flex-1">
+                        <p class="text-sm">${message}</p>
+                        <p class="text-xs opacity-75 mt-1">${timestamp}</p>
+                    </div>
+                </div>
+            `;
+
+            logsContainer.insertBefore(logEntry, logsContainer.firstChild);
+        }
+
+        // 清空日志
+        function clearLogs() {
+            document.getElementById('operation_logs').innerHTML = '<p class="text-sm text-gray-500 text-center">暂无操作记录</p>';
+        }
+
+        // 显示消息弹窗
+        function showMessage(title, message, type = 'success') {
+            const modal = document.getElementById('message_modal');
+            const content = document.getElementById('modal_content');
+
+            const colors = {
+                'success': 'from-green-500 to-green-600',
+                'error': 'from-red-500 to-red-600',
+                'warning': 'from-yellow-500 to-yellow-600'
+            };
+
+            const icons = {
+                'success': 'fa-check-circle',
+                'error': 'fa-times-circle',
+                'warning': 'fa-exclamation-triangle'
+            };
+
+            content.innerHTML = `
+                <div class="bg-gradient-to-r ${colors[type]} text-white px-4 py-3 rounded-t-lg -m-6 mb-4">
+                    <h3 class="text-lg font-bold"><i class="fas ${icons[type]} mr-2"></i>${title}</h3>
+                </div>
+                <p class="text-gray-700 mb-4">${message}</p>
+                <button onclick="closeMessage()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition">
+                    确定
+                </button>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeMessage() {
+            document.getElementById('message_modal').classList.add('hidden');
+        }
+
+        // 功能1：更新用户等级
+        async function updateUserLevel() {
+            const uid = document.getElementById('user_level_uid').value;
+            const level = document.getElementById('user_level_value').value;
+            const btn = document.getElementById('level_update_btn');
+
+            if (!uid || !level) {
+                showMessage('参数缺失', '请填写用户UID和目标等级', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner loading-spinner mr-2"></i>处理中...';
+
+            try {
+                // TODO: 替换为实际的API接口
+                const response = await fetch('/feature_platform/api/update_user_level/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        uid: uid,
+                        level: level
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    addLog(`成功将用户 ${uid} 的等级修改为 LV${level}`, 'success');
+                    showMessage('操作成功', `用户 ${uid} 的等级已更新为 LV${level}`);
+                    document.getElementById('user_level_uid').value = '';
+                    document.getElementById('user_level_value').value = '';
+                } else {
+                    addLog(`修改用户 ${uid} 等级失败：${result.message}`, 'error');
+                    showMessage('操作失败', result.message || '请求失败', 'error');
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                addLog(`网络错误：${error.message}`, 'error');
+                showMessage('网络错误', '请稍后重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>提交修改';
+            }
+        }
+
+        // 功能2：更新用户积分
+        async function updateUserPoints() {
+            const uid = document.getElementById('points_uid').value;
+            const points = document.getElementById('points_value').value;
+            const btn = document.getElementById('points_update_btn');
+
+            if (!uid || !points) {
+                showMessage('参数缺失', '请填写用户UID和积分变动值', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner loading-spinner mr-2"></i>处理中...';
+
+            try {
+                // TODO: 替换为实际的API接口
+                const response = await fetch('/feature_platform/api/update_user_points/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        uid: uid,
+                        points: parseInt(points)
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    const action = points > 0 ? '增加' : '减少';
+                    addLog(`成功${action}用户 ${uid} 积分 ${Math.abs(points)} 点`, 'success');
+                    showMessage('操作成功', `用户 ${uid} 的积分已${action}${Math.abs(points)}点`);
+                    document.getElementById('points_uid').value = '';
+                    document.getElementById('points_value').value = '';
+                } else {
+                    addLog(`修改用户 ${uid} 积分失败：${result.message}`, 'error');
+                    showMessage('操作失败', result.message || '请求失败', 'error');
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                addLog(`网络错误：${error.message}`, 'error');
+                showMessage('网络错误', '请稍后重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check mr-2"></i>确认修改';
+            }
+        }
+
+        // 功能3：更新用户状态
+        async function updateUserStatus() {
+            const uid = document.getElementById('ban_uid').value;
+            const action = document.getElementById('ban_action').value;
+            const reason = document.getElementById('ban_reason').value;
+            const btn = document.getElementById('ban_update_btn');
+
+            if (!uid || !action) {
+                showMessage('参数缺失', '请填写用户UID和操作类型', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner loading-spinner mr-2"></i>处理中...';
+
+            try {
+                // TODO: 替换为实际的API接口
+                const response = await fetch('/feature_platform/api/update_user_status/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        uid: uid,
+                        action: action,
+                        reason: reason || ''
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    const actionText = action === 'ban' ? '封禁' : '解封';
+                    addLog(`成功${actionText}用户 ${uid}`, 'success');
+                    showMessage('操作成功', `用户 ${uid} 已${actionText}`);
+                    document.getElementById('ban_uid').value = '';
+                    document.getElementById('ban_action').value = '';
+                    document.getElementById('ban_reason').value = '';
+                } else {
+                    addLog(`${actionText}用户 ${uid} 失败：${result.message}`, 'error');
+                    showMessage('操作失败', result.message || '请求失败', 'error');
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                addLog(`网络错误：${error.message}`, 'error');
+                showMessage('网络错误', '请稍后重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-shield-alt mr-2"></i>执行操作';
+            }
+        }
+
+        // 功能4：批量操作
+        async function batchOperation() {
+            const uidsText = document.getElementById('batch_uids').value;
+            const action = document.getElementById('batch_action').value;
+            const btn = document.getElementById('batch_btn');
+
+            if (!uidsText || !action) {
+                showMessage('参数缺失', '请填写UID列表和操作类型', 'warning');
+                return;
+            }
+
+            const uids = uidsText.split('\n').filter(uid => uid.trim()).map(uid => uid.trim());
+
+            if (uids.length === 0) {
+                showMessage('参数错误', 'UID列表不能为空', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner loading-spinner mr-2"></i>处理中...';
+
+            try {
+                // TODO: 替换为实际的API接口
+                const response = await fetch('/feature_platform/api/batch_operation/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        uids: uids,
+                        action: action
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    addLog(`批量操作成功，共处理 ${uids.length} 个用户`, 'success');
+                    showMessage('操作成功', `成功处理 ${uids.length} 个用户`);
+                    document.getElementById('batch_uids').value = '';
+                    document.getElementById('batch_action').value = '';
+                } else {
+                    addLog(`批量操作失败：${result.message}`, 'error');
+                    showMessage('操作失败', result.message || '请求失败', 'error');
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                addLog(`网络错误：${error.message}`, 'error');
+                showMessage('网络错误', '请稍后重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play mr-2"></i>开始批量处理';
+            }
+        }
+    </script>
+
+</body>
+</html>

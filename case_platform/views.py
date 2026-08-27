@@ -43,6 +43,7 @@ def create_test_case(request):
 
             for index, case_data in enumerate(data):
                 try:
+                    print(case_data)
                     test_case = TestCase.objects.create(
                         name=case_data.get('name'),
                         hoster_name=case_data.get('hoster_name'),
@@ -52,7 +53,7 @@ def create_test_case(request):
                         case_setup=case_data.get('case_setup'),
                         case_teardown=case_data.get('case_teardown'),
                         case_steps=case_data.get('case_steps', []),
-                        case_asserts=case_data.get('case_asserts', []),
+                        case_asserts=case_data.get('case_asserts', ""),
                         exec_status=case_data.get('exec_status', {}),
                         last_update_person=case_data.get('last_update_person', '')
                     )
@@ -89,7 +90,7 @@ def create_test_case(request):
                 case_setup=data.get('case_setup'),
                 case_teardown=data.get('case_teardown'),
                 case_steps=data.get('case_steps', []),
-                case_asserts=data.get('case_asserts', []),
+                case_asserts=data.get('case_asserts', ""),
                 exec_status=data.get('exec_status', {}),
                 last_update_person=data.get('last_update_person', '')
             )

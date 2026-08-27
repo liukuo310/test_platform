@@ -136,6 +136,63 @@
             background-color: #fef3c7;
             color: #92400e;
         }
+
+        /* 步骤编辑器样式 */
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .step-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .step-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .step-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .step-action-input {
+            width: 100%;
+        }
+
+        .step-expected-input {
+            width: 100%;
+        }
+
+        .step-delete-btn {
+
+        }
+
     </style>
 </head>
 
@@ -336,9 +393,25 @@
                 </div>
 
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">操作步骤（JSON格式）</label>
-                    <textarea id="create_case_steps" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono" placeholder='例如：[{"step": 1, "action": "点击登录按钮", "data": ""}]'></textarea>
-                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的数组，每个元素包含 step、action、data</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">操作步骤</label>
+
+                    <!-- 可视化步骤编辑器 -->
+                    <div id="create_steps_editor" class="space-y-3">
+                        <!-- 步骤列表将在这里动态生成 -->
+                    </div>
+
+                    <!-- 添加步骤按钮 -->
+                    <button type="button" id="add_create_step_btn" class="mt-3 w-full py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        <i class="fas fa-plus-circle mr-1"></i> 添加步骤
+                    </button>
+
+                    <!-- 隐藏的JSON存储框（用于表单提交） -->
+                    <textarea id="create_case_steps" rows="1" class="hidden"></textarea>
+
+                    <p class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        点击"添加步骤"按钮添加测试步骤，每个步骤包含操作描述和预期结果
+                    </p>
                 </div>
 
                 <div class="mb-6">
@@ -416,9 +489,25 @@
                 </div>
 
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">操作步骤（JSON格式）</label>
-                    <textarea id="edit_case_steps" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono" placeholder='例如：[{"step": 1, "action": "点击登录按钮", "data": ""}, {"step": 2, "action": "输入用户名", "data": "admin"}]'></textarea>
-                    <p class="text-xs text-gray-500 mt-1">请输入JSON格式的数组，每个元素包含 step（步骤序号）、action（操作动作）、data（操作数据）</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">操作步骤</label>
+
+                    <!-- 可视化步骤编辑器 -->
+                    <div id="edit_steps_editor" class="space-y-3">
+                        <!-- 步骤列表将在这里动态生成 -->
+                    </div>
+
+                    <!-- 添加步骤按钮 -->
+                    <button type="button" id="add_edit_step_btn" class="mt-3 w-full py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        <i class="fas fa-plus-circle mr-1"></i> 添加步骤
+                    </button>
+
+                    <!-- 隐藏的JSON存储框（用于表单提交） -->
+                    <textarea id="edit_case_steps" rows="1" class="hidden"></textarea>
+
+                    <p class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        点击"添加步骤"按钮添加测试步骤，每个步骤包含操作动作和操作数据
+                    </p>
                 </div>
 
                 <div class="mb-6">
@@ -460,6 +549,30 @@ var totalCount = 0;
 
 $(document).ready(function () {
 
+    // ==================== 步骤编辑器相关 ====================
+
+    // 创建用例 - 添加步骤
+    $("#add_create_step_btn").click(function() {
+        addCreateStep();
+    });
+
+    // 编辑用例 - 添加步骤
+    $("#add_edit_step_btn").click(function() {
+        addEditStep();
+    });
+
+    // 删除步骤（使用事件委托）
+    $(document).on('click', '.step-delete-btn', function() {
+        $(this).closest('.step-item').remove();
+        updateStepNumbers();
+        syncStepsToHiddenField();
+    });
+
+    // 监听步骤输入变化，同步到隐藏字段
+    $(document).on('input', '.step-action-input, .step-expected-input', function() {
+        syncStepsToHiddenField();
+    });
+
     // ==================== 创建用例相关 ====================
 
     // 打开创建用例弹窗
@@ -471,6 +584,7 @@ $(document).ready(function () {
     $(".bottom-sheet-close, #cancel_create_case").click(function () {
         $("#createCaseModal").css("display", "none");
         $("#create_case_form")[0].reset();
+        $("#create_steps_editor").empty();
     });
 
     // 提交创建用例表单
@@ -623,6 +737,8 @@ $(document).ready(function () {
     $("#editCaseModal .bottom-sheet-close, #cancel_edit_case").click(function () {
         $("#editCaseModal").css("display", "none");
         $("#edit_case_form")[0].reset();
+        $("#edit_steps_editor").empty();
+        $("#edit_case_steps").val("");
     });
 
     // 提交编辑表单
@@ -757,14 +873,27 @@ $(document).ready(function () {
                 if (response.status === 'success' && response.data) {
                     var data = response.data;
 
+                    console.log("=== 后端返回的完整数据 ===", data);
+                    console.log("case_steps 数据:", data.case_steps);
+
                     $("#edit_case_id").val(data.case_id);
                     $("#edit_name").val(data.name);
                     $("#edit_hoster_name").val(data.hoster_name);
-                    $("#edit_tag").val(data.tag || "");
+                    $("#edit_tag").val(data.case_tag || "");
                     $("#edit_annotation").val(data.annotation || "");
                     $("#edit_case_setup").val(data.case_setup || "");
                     $("#edit_case_teardown").val(data.case_teardown || "");
 
+                    // 加载步骤到可视化编辑器（优先）
+                    if (data.case_steps && Array.isArray(data.case_steps) && data.case_steps.length > 0) {
+                        console.log("开始加载步骤到编辑器...");
+                        loadStepsToEditor("#edit_steps_editor", data.case_steps);
+                    } else {
+                        console.log("没有步骤数据或步骤为空");
+                        $("#edit_steps_editor").empty();
+                    }
+
+                    // 同时填充JSON文本框（保持可见）
                     if (data.case_steps && Array.isArray(data.case_steps) && data.case_steps.length > 0) {
                         $("#edit_case_steps").val(JSON.stringify(data.case_steps, null, 2));
                     } else {
@@ -1002,6 +1131,173 @@ function createPageButton(pageNum, isActive) {
 
     return button;
 }
-</script>
 
-</html>
+// ==================== 步骤编辑器辅助函数 ====================
+
+// 创建用例 - 添加步骤
+function addCreateStep(stepData = null) {
+    var editor = $("#create_steps_editor");
+    var stepCount = editor.children().length + 1;
+
+    console.log("添加步骤数据:", stepData);
+
+    var actionValue = stepData ? (stepData.action || '') : '';
+    var expectedValue = stepData ? (stepData.expected || '') : '';
+
+    console.log("操作描述:", actionValue, "预期结果:", expectedValue);
+
+    var stepHtml = `        <div class="step-item" data-step="${stepCount}">
+            <div class="step-number">${stepCount}</div>
+            <div class="step-content">
+                <div class="step-input-group">
+                    <input type="text"
+                           class="step-action-input px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                           placeholder="操作描述（如：点击登录按钮，输入用户名admin）"
+                           value="${escapeHtml(actionValue)}">
+                    <input type="text"
+                           class="step-expected-input px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm"
+                           placeholder="预期结果（如：登录成功，显示欢迎信息）"
+                           value="${escapeHtml(expectedValue)}">
+                </div>
+            </div>
+            <button type="button" class="step-delete-btn" title="删除此步骤">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    `;
+
+    editor.append(stepHtml);
+    syncStepsToHiddenField('#create_steps_editor');
+}
+
+// 编辑用例 - 添加步骤
+function addEditStep(stepData = null) {
+    var editor = $("#edit_steps_editor");
+    var stepCount = editor.children().length + 1;
+
+    console.log("添加步骤数据:", stepData);
+
+    var actionValue = stepData ? (stepData.action || '') : '';
+    var expectedValue = stepData ? (stepData.expected || '') : '';
+
+    console.log("操作描述:", actionValue, "预期结果:", expectedValue);
+
+    var stepHtml = `        <div class="step-item" data-step="${stepCount}">
+            <div class="step-number">${stepCount}</div>
+            <div class="step-content">
+                <div class="step-input-group">
+                    <input type="text"
+                           class="step-action-input px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                           placeholder="操作描述（如：点击登录按钮，输入用户名admin）"
+                           value="${escapeHtml(actionValue)}">
+                    <input type="text"
+                           class="step-expected-input px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm"
+                           placeholder="预期结果（如：登录成功，显示欢迎信息）"
+                           value="${escapeHtml(expectedValue)}">
+                </div>
+            </div>
+            <button type="button" class="step-delete-btn" title="删除此步骤">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    `;
+
+    editor.append(stepHtml);
+    syncStepsToHiddenField('#edit_steps_editor');
+}
+
+// 更新步骤序号
+function updateStepNumbers() {
+    $(".step-item").each(function(index) {
+        $(this).find(".step-number").text(index + 1);
+        $(this).attr("data-step", index + 1);
+    });
+}
+
+// 同步步骤数据到隐藏字段（转换为JSON）
+function syncStepsToHiddenField() {
+    var steps = [];
+
+    $("#create_steps_editor .step-item").each(function(index) {
+        var action = $(this).find(".step-action-input").val();
+        var expected = $(this).find(".step-expected-input").val();
+
+        if (action || expected) {
+            steps.push({
+                step: index + 1,
+                action: action,
+                expected: expected
+            });
+        }
+    });
+
+    $("#create_case_steps").val(JSON.stringify(steps));
+
+    // 同步编辑框的步骤
+    var editSteps = [];
+    $("#edit_steps_editor .step-item").each(function(index) {
+        var action = $(this).find(".step-action-input").val();
+        var expected = $(this).find(".step-expected-input").val();
+
+        if (action || expected) {
+            editSteps.push({
+                step: index + 1,
+                action: action,
+                expected: expected
+            });
+        }
+    });
+
+    $("#edit_case_steps").val(JSON.stringify(editSteps));
+}
+// HTML转义函数
+function escapeHtml(text) {
+    var map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// 加载步骤到编辑器（用于编辑时回显）
+function loadStepsToEditor(editorId, steps) {
+    var editor = $(editorId);
+    editor.empty();
+
+    console.log("=== loadStepsToEditor 被调用 ===");
+    console.log("编辑器ID:", editorId);
+    console.log("步骤数据:", JSON.stringify(steps, null, 2));
+
+    if (steps && Array.isArray(steps) && steps.length > 0) {
+        console.log("步骤数量:", steps.length);
+
+        steps.forEach(function(step, index) {
+            console.log(`步骤 ${index + 1}:`, step);
+
+            // 兼容不同的数据结构
+            var stepData = {
+                action: step.action || step.step_description || step.text || '',
+                expected: step.expected || step.expected_result || ''
+            };
+
+            console.log("解析后的 stepData:", stepData);
+
+            if (editorId === "#create_steps_editor") {
+                addCreateStep(stepData);
+            } else {
+                addEditStep(stepData);
+            }
+        });
+
+        // 同步到JSON字段
+        syncStepsToHiddenField(editorId);
+
+        console.log("步骤加载完成！");
+    } else {
+        console.log("步骤数据为空或不是数组");
+    }
+}
+</script>
