@@ -1,5 +1,6 @@
 from django.urls import path
 
+from performance.views.client_test_view import performance_main_test_view, performance_view, performance_test_data
 from performance.views.client_views import performance_main_view, get_device_info, select_test_template, \
     get_android_performance_info, get_phone_message, result_report, get_ios_sq_info, ios_collect
 from performance.views.service_views import service_performance_main, service_performance, \
@@ -8,7 +9,13 @@ from performance.views.service_views import service_performance_main, service_pe
 urlpatterns = [
     path('performance_main', service_performance_main, name="service_performance_main"),
     # 客户端性能接口
-    path('client_performance_main', performance_main_view, name="performance_main_view"),
+    # 客户端测试页面
+    path('client_performance_main', performance_main_test_view, name="performance_main_test_view"),  # 测试接口
+    path('performance_view', performance_view, name="performance_view"),  # 测试页面
+    path('performance_test_data', performance_test_data, name="performance_test_data"),  # 数据
+
+
+    # path('client_performance_main', performance_main_view, name="performance_main_view"),
     path('get_device_info', get_device_info, name="get_device_info"),
     path('select_test_template', select_test_template, name="select_test_template"),
     path('get_android_info', get_android_performance_info, name='android_info'),

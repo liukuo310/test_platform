@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动端性能监控</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/highcharts/11.4.1/highstock.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/highcharts/11.4.1/modules/exporting.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/highcharts/11.4.1/locale/zh-cn.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .test-info-banner {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-stop:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(235, 51, 73, 0.4);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%);
+            color: white;
+        }
+
+        .btn-clear:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(71, 118, 230, 0.4);
+        }
+
+        .btn-back {
+            background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+            color: white;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(107, 115, 255, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-item label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 25px;
+        }
+
+        .chart-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .chart-wrapper:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .chart-wrapper.hidden {
+            display: none;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 400px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.active {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 移动端性能监控系统</h1>
+            <p style="font-size: 1.1em; opacity: 0.9;">实时监测设备性能指标</p>
+        </div>
+
+        <!-- 测试信息横幅 -->
+        <div class="test-info-banner">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-6">
+                    <div>
+                        <span class="text-sm text-gray-600"><i class="fas fa-mobile-alt mr-2 text-blue-600"></i>设备：</span>
+                        <span id="testDeviceName" class="font-semibold text-gray-800">加载中...</span>
+                    </div>
+                    <div class="border-l pl-6">
+                        <span class="text-sm text-gray-600"><i class="fab fa-android mr-2 text-green-600"></i>应用：</span>
+                        <span id="testAppName" class="font-semibold text-gray-800">加载中...</span>
+                    </div>
+                </div>
+                <button onclick="goBack()" class="btn btn-back px-4 py-2 text-sm">
+                    <i class="fas fa-arrow-left mr-2"></i>返回
+                </button>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="button-group">
+                <button class="btn btn-start" id="startBtn" onclick="startMonitoring()">
+                    <span class="status-indicator" id="statusIndicator"></span>开始监控
+                </button>
+                <button class="btn btn-stop" id="stopBtn" onclick="stopMonitoring()" disabled>
+                    ⏹ 结束监控
+                </button>
+                <button class="btn btn-clear" id="clearBtn" onclick="clearData()">
+                    🗑 清空数据
+                </button>
+            </div>
+
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showCpu" checked onchange="toggleChart('cpu')">
+                    <label for="showCpu">CPU 使用率</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showMemory" checked onchange="toggleChart('memory')">
+                    <label for="showMemory">内存占用</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showFps" checked onchange="toggleChart('fps')">
+                    <label for="showFps">FPS 帧率</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showNetwork" checked onchange="toggleChart('network')">
+                    <label for="showNetwork">网络流量</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showTemperature" checked onchange="toggleChart('temperature')">
+                    <label for="showTemperature">设备温度</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showBattery" checked onchange="toggleChart('battery')">
+                    <label for="showBattery">电池电量</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-wrapper" id="cpuWrapper">
+                <div class="chart-title">🖥 CPU 使用率 (%)</div>
+                <div id="container_cpu" class="chart-container"></div>
+            </div>
+
+            <div class="chart-wrapper" id="memoryWrapper">
+                <div class="chart-title">💾 内存占用 (MB)</div>
+                <div id="container_memory" class="chart-container"></div>
+            </div>
+
+            <div class="chart-wrapper" id="fpsWrapper">
+                <div class="chart-title">🎮 FPS 帧率</div>
+                <div id="container_fps" class="chart-container"></div>
+            </div>
+
+            <div class="chart-wrapper" id="networkWrapper">
+                <div class="chart-title">🌐 网络流量 (KB/s)</div>
+                <div id="container_network" class="chart-container"></div>
+            </div>
+
+            <div class="chart-wrapper" id="temperatureWrapper">
+                <div class="chart-title">🌡 设备温度 (°C)</div>
+                <div id="container_temperature" class="chart-container"></div>
+            </div>
+
+            <div class="chart-wrapper" id="batteryWrapper">
+                <div class="chart-title">🔋 电池电量 (%)</div>
+                <div id="container_battery" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+        Highcharts.setOptions({
+            global: { useUTC: false },
+            lang: {
+                rangeSelectorZoom: '',
+                downloadJPEG: '下载 JPEG 图片',
+                downloadPDF: '下载 PDF 文档',
+                downloadPNG: '下载 PNG 图片',
+                downloadSVG: '下载 SVG 图片',
+                downloadCSV: '下载 CSV 文件',
+                downloadXLS: '下载 XLS 文件',
+                exitFullscreen: '退出全屏',
+                exportData: {
+                    annotationHeader: '标注',
+                    categoryDatetimeHeader: '时间',
+                    categoryHeader: '类别'
+                },
+                fullscreen: '全屏',
+                noData: '没有数据',
+                numericSymbolMagnitude: 1000,
+                numericSymbols: ['k', 'M', 'G', 'T', 'P', 'E'],
+                printChart: '打印图表',
+                viewData: '查看数据表格'
+            }
+        });
+
+        let charts = {};
+        let monitoringInterval = null;
+        let dataCounter = 0;
+        let isMonitoring = false;
+        let currentRequest = null;
+
+        const chartConfigs = {
+            cpu: {
+                container: 'container_cpu',
+                wrapper: 'cpuWrapper',
+                title: 'CPU 使用率 (%)',
+                series: [{ name: '总CPU', data: [], color: '#FF6B6B' }]
+            },
+            memory: {
+                container: 'container_memory',
+                wrapper: 'memoryWrapper',
+                title: '内存占用 (MB)',
+                series: [{ name: '总内存', data: [], color: '#4ECDC4' }]
+            },
+            fps: {
+                container: 'container_fps',
+                wrapper: 'fpsWrapper',
+                title: 'FPS 帧率',
+                series: [
+                    { name: 'FPS', data: [], color: '#95E1D3' },
+                    { name: '卡顿', data: [], color: '#F38181' }
+                ]
+            },
+            network: {
+                container: 'container_network',
+                wrapper: 'networkWrapper',
+                title: '网络流量 (KB/s)',
+                series: [
+                    { name: '上传', data: [], color: '#F38181' },
+                    { name: '下载', data: [], color: '#AA96DA' }
+                ]
+            },
+            temperature: {
+                container: 'container_temperature',
+                wrapper: 'temperatureWrapper',
+                title: '设备温度 (°C)',
+                series: [{ name: '温度', data: [], color: '#FCBAD3' }]
+            },
+            battery: {
+                container: 'container_battery',
+                wrapper: 'batteryWrapper',
+                title: '电池电量 (%)',
+                series: [{ name: '电量', data: [], color: '#A8E6CF' }]
+            }
+        };
+
+        function initCharts() {
+            Object.keys(chartConfigs).forEach(key => {
+                const config = chartConfigs[key];
+                charts[key] = Highcharts.stockChart(config.container, {
+                    chart: {
+                        styledMode: false,
+                        zoomType: 'x'
+                    },
+                    title: { text: null },
+                    xAxis: {
+                        type: 'datetime',
+                        labels: {
+                            format: '{value:%H:%M:%S}'
+                        }
+                    },
+                    yAxis: {
+                        title: { text: null },
+                        opposite: false
+                    },
+                    tooltip: {
+                        shared: true,
+                        valueDecimals: 2,
+                        xDateFormat: '%Y-%m-%d %H:%M:%S'
+                    },
+                    legend: {
+                        enabled: true,
+                        align: 'center',
+                        verticalAlign: 'top',
+                        layout: 'horizontal'
+                    },
+                    navigator: { enabled: true },
+                    scrollbar: { enabled: true },
+                    rangeSelector: {
+                        buttons: [{
+                            count: 1,
+                            type: 'minute',
+                            text: '1分'
+                        }, {
+                            count: 5,
+                            type: 'minute',
+                            text: '5分'
+                        }, {
+                            type: 'all',
+                            text: '全部'
+                        }],
+                        inputEnabled: true,
+                        selected: 0
+                    },
+                    exporting: { enabled: true },
+                    series: config.series,
+                    credits: { enabled: false }
+                });
+            });
+        }
+
+        async function startMonitoring() {
+            const deviceName = document.getElementById('testDeviceName').textContent;
+            const appName = document.getElementById('testAppName').textContent;
+
+            if (deviceName === '未选择设备' || appName === '未选择应用') {
+                alert('请先返回主页选择设备和应用！');
+                return;
+            }
+
+            isMonitoring = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('statusIndicator').classList.add('active');
+
+            console.log('✅ 开始监控...');
+            console.log('设备:', deviceName);
+            console.log('应用:', appName);
+
+            await fetchTestData();
+
+            if (isMonitoring) {
+                monitoringInterval = setInterval(async () => {
+                    if (isMonitoring) {
+                        await fetchTestData();
+                    }
+                }, 1000);
+            }
+        }
+
+        function stopMonitoring() {
+            isMonitoring = false;
+
+            if (currentRequest) {
+                currentRequest.abort();
+                currentRequest = null;
+                console.log('⚠️ 已取消正在进行的请求');
+            }
+
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+                console.log('⚠️ 已清除定时器');
+            }
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('statusIndicator').classList.remove('active');
+
+            console.log('🛑 停止监控...');
+        }
+
+        function clearData() {
+            if (confirm('确定要清空所有数据吗？')) {
+                const wasMonitoring = isMonitoring;
+                if (isMonitoring) {
+                    stopMonitoring();
+                }
+
+                Object.keys(charts).forEach(key => {
+                    const chart = charts[key];
+                    chart.series.forEach(series => {
+                        series.setData([], true);
+                    });
+                });
+                dataCounter = 0;
+                console.log('🗑 数据已清空');
+
+                if (wasMonitoring) {
+                    startMonitoring();
+                }
+            }
+        }
+
+        function toggleChart(chartName) {
+            const checkbox = document.getElementById('show' + chartName.charAt(0).toUpperCase() + chartName.slice(1));
+            const wrapper = document.getElementById(chartConfigs[chartName].wrapper);
+
+            if (checkbox.checked) {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        async function fetchTestData() {
+            if (!isMonitoring) {
+                return;
+            }
+
+            try {
+                const controller = new AbortController();
+                currentRequest = controller;
+
+                const response = await fetch('/performance/performance_test_data?mode=normal', {
+                    signal: controller.signal
+                });
+
+                if (!isMonitoring) {
+                    console.log('⚠️ 监控已停止，忽略本次数据');
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('获取到的数据:', data);
+
+                if (data.error) {
+                    console.warn('接口返回错误:', data.error);
+                    console.log('错误详情:', data.message);
+
+                    if (data.mode === 'mock') {
+                        console.log('切换到模拟数据模式...');
+                        await fetchTestDataWithMock();
+                        return;
+                    }
+                    return;
+                }
+
+                updateCharts(data);
+                dataCounter++;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('⚠️ 请求已取消');
+                } else {
+                    console.error('获取数据失败:', error);
+                }
+            } finally {
+                currentRequest = null;
+            }
+        }
+
+        async function fetchTestDataWithMock() {
+            if (!isMonitoring) {
+                return;
+            }
+
+            try {
+                const controller = new AbortController();
+                currentRequest = controller;
+
+                const response = await fetch('/performance/performance_test_data?mode=test', {
+                    signal: controller.signal
+                });
+
+                if (!isMonitoring) {
+                    console.log('⚠️ 监控已停止，忽略本次数据');
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('模拟数据:', data);
+
+                updateCharts(data);
+                dataCounter++;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('⚠️ 请求已取消');
+                } else {
+                    console.error('获取模拟数据失败:', error);
+                }
+            } finally {
+                currentRequest = null;
+            }
+        }
+
+        function updateCharts(data) {
+            const now = new Date().getTime();
+
+            try {
+                if (data.cpu_data && charts.cpu) {
+                    const cpuValue = data.cpu_data.total || 0;
+                    charts.cpu.series[0].addPoint([now, cpuValue], true, false);
+                    console.log('CPU数据:', cpuValue);
+                }
+
+                if (data.mem_data && charts.memory) {
+                    const memValue = data.mem_data.total_pss || 0;
+                    charts.memory.series[0].addPoint([now, memValue], true, false);
+                    console.log('内存数据:', memValue);
+                }
+
+                if (data.fps_data && charts.fps) {
+                    const fpsValue = data.fps_data.test_data_fps || 0;
+                    const jankyValue = data.fps_data.test_data_janky || 0;
+                    charts.fps.series[0].addPoint([now, fpsValue], true, false);
+                    charts.fps.series[1].addPoint([now, jankyValue], true, false);
+                    console.log('FPS数据:', fpsValue, '卡顿:', jankyValue);
+                }
+
+                if (data.net_data && charts.network) {
+                    const upValue = data.net_data.test_data_up_net || 0;
+                    const downValue = data.net_data.test_data_down_net || 0;
+                    charts.network.series[0].addPoint([now, upValue], true, false);
+                    charts.network.series[1].addPoint([now, downValue], true, false);
+                    console.log('网络数据 - 上传:', upValue, '下载:', downValue);
+                }
+
+                if (data.temperature_data && charts.temperature) {
+                    const tempValue = data.temperature_data.battery_temperature || 0;
+                    charts.temperature.series[0].addPoint([now, tempValue], true, false);
+                    console.log('温度数据:', tempValue);
+                }
+
+                if (data.battery_level !== undefined && charts.battery) {
+                    const batteryValue = data.battery_level || 0;
+                    charts.battery.series[0].addPoint([now, batteryValue], true, false);
+                    console.log('电池数据:', batteryValue);
+                }
+            } catch (error) {
+                console.error('更新图表失败:', error);
+            }
+        }
+
+        function loadTestConfig() {
+            try {
+                const deviceInfo = sessionStorage.getItem('selectedDevice');
+                const appInfo = sessionStorage.getItem('selectedApp');
+
+                console.log('=== 加载测试配置 ===');
+                console.log('设备信息:', deviceInfo);
+                console.log('应用信息:', appInfo);
+
+                if (deviceInfo && appInfo) {
+                    const device = JSON.parse(deviceInfo);
+                    const app = JSON.parse(appInfo);
+
+                    document.getElementById('testDeviceName').textContent =
+                        `${device.brand} ${device.model}`;
+                    document.getElementById('testAppName').textContent = app.app_name;
+
+                    console.log('已选择设备:', device.device_name);
+                    console.log('已选择应用:', app.app_name, '包名:', app.package_name);
+                } else {
+                    document.getElementById('testDeviceName').textContent = '未选择设备';
+                    document.getElementById('testAppName').textContent = '未选择应用';
+                    console.warn('未找到测试配置信息');
+                }
+            } catch (error) {
+                console.error('加载测试配置失败:', error);
+                document.getElementById('testDeviceName').textContent = '加载失败';
+                document.getElementById('testAppName').textContent = '加载失败';
+            }
+        }
+
+        async function testApiConnection() {
+            console.log('=== 测试API连接 ===');
+            try {
+                const response = await fetch('/performance/performance_test_data?mode=test');
+                console.log('响应状态:', response.status);
+                console.log('响应头:', response.headers);
+
+                const data = await response.json();
+                console.log('返回数据:', data);
+                console.log('数据结构:', Object.keys(data));
+
+                return data;
+            } catch (error) {
+                console.error('API连接失败:', error);
+                return null;
+            }
+        }
+
+        function goBack() {
+            if (isMonitoring) {
+                if (confirm('监控正在进行中，确定要返回吗？')) {
+                    stopMonitoring();
+                    window.location.href = '/performance/client_performance_main';
+                }
+            } else {
+                window.location.href = '/performance/client_performance_main';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            console.log('🚀 页面加载完成');
+            console.log('Highcharts 版本:', Highcharts.version);
+            console.log('isMonitoring 初始值:', isMonitoring);
+            initCharts();
+            loadTestConfig();
+
+            setTimeout(() => {
+                testApiConnection().then(data => {
+                    if (data) {
+                        console.log('✅ API连接成功，数据格式正确');
+                    } else {
+                        console.error('❌ API连接失败');
+                    }
+                });
+            }, 1000);
+
+            console.log('图表初始化完成');
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (isMonitoring) {
+                stopMonitoring();
+            }
+            return '监控正在进行中，确定要离开吗？';
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('📄 页面隐藏，暂停监控');
+                if (isMonitoring) {
+                    stopMonitoring();
+                }
+            }
+        });
+
+    </script>
+
+
+</body>
+</html>
